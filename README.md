@@ -14,3 +14,9 @@ python app.py
 ```
 
 Open `http://127.0.0.1:5055`.
+
+## Deployment modes
+
+The calculator is a complete standalone web app and can be developed, tested, and deployed on its
+own. The Office Scientific Tools portal may link to its service URL, but `ml_server` and the other
+tools are not required dependencies.
