@@ -1,4 +1,6 @@
-from app import app, evaluate, plot_expression, VariableSpec
+import ast
+
+from app import app, evaluate, plot_expression, VariableSpec, ExpressionError, _canonical, _evaluate
 
 
 def test_evaluate_scientific_expression():
@@ -39,3 +41,50 @@ def test_plot_contracts_for_one_and_two_variables():
     two_d = plot_expression("x^2 + y", [VariableSpec("x", 0, 1, 1), VariableSpec("y", 0, 1, 1)])
     assert two_d["mode"] == "2d"
     assert len(two_d["grid"]["z"]) == 2
+
+
+def test_expression_validation_and_degree_mode():
+    assert evaluate("sin(90)", angle_unit="degree") == 1
+    for expression in ("", "1" * 1025, "1 +", "__import__('os')", "unknown"):
+        try:
+            evaluate(expression)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(expression)
+    for variables in ({"bad-name": 1}, {"x": "nope"}):
+        try:
+            evaluate("x", variables)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(variables)
+    for bad_unit in ("gradians",):
+        try:
+            evaluate("1", angle_unit=bad_unit)
+        except ExpressionError:
+            pass
+        else:
+            raise AssertionError(bad_unit)
+
+
+def test_plot_rejects_invalid_ranges_and_payloads():
+    for specs in ([VariableSpec("x", 1, 0, 1)], [VariableSpec("x", 0, 1, 0)], [], [VariableSpec("x", 0, 10000, 1)]):
+        try:
+            plot_expression("x", specs)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(specs)
+    with app.test_client() as client:
+        assert client.post("/api/evaluate", json={"expression": "1/0"}).status_code == 400
+        assert client.post("/api/plot", json={"expression": "x^2", "variables": [{"name": "x", "start": 0, "stop": 1, "step": 1}]}).get_json()["ok"] is True
+        assert client.post("/api/scientific_calculator/plot", json={"expression": "x", "variables": [{"name": "x"}]}).status_code == 400
+    assert evaluate("-1") == -1
+    for callback in (lambda: _canonical(ast.Load()), lambda: _evaluate(ast.Load(), {}, {})):
+        try:
+            callback()
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unsupported AST was accepted")

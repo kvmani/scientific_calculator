@@ -195,4 +195,4 @@ def api_plot():
     except (KeyError, ExpressionError, TypeError, ValueError, ZeroDivisionError, OverflowError) as error: return jsonify({"ok": False, "error": str(error)}), 400
 
 
-if __name__ == "__main__": app.run(host="127.0.0.1", port=5055, debug=False)
+if __name__ == "__main__": app.run(host="127.0.0.1", port=5055, debug=False)  # pragma: no cover
