@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scientific-calculator"
+version = "0.2.0"
+description = "Safe local scientific and engineering calculator service"
+requires-python = ">=3.9"
+dependencies = ["Flask==3.0.2"]
+
+[project.optional-dependencies]
+test = ["pytest>=7.4"]
