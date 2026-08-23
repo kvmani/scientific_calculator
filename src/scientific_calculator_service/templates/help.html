@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scientific Calculator · Help</title>
+<style>
+body{margin:0;background:#f4f8f7;color:#183b56;font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1050px;margin:auto;padding:45px 24px}
+a{color:#0d554d;font-weight:700}
+.eyebrow{color:#e86f51;font-size:12px;font-weight:800;letter-spacing:.15em}
+h1{font-size:clamp(38px,6vw,64px);line-height:1;letter-spacing:-.04em;margin:12px 0 24px}
+h2{font-size:1.15rem;margin:0 0 14px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
+.hero img{width:100%;border-radius:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}
+.card{background:#fff;border:1px solid #d7e1e2;border-radius:16px;padding:22px}
+dt{font-weight:800}
+dd{margin:3px 0 15px;color:#60717c}
+/* Equations are typeset by the vendored MathJax bundle in static/vendor/mathjax.
+   The raw TeX is hidden only while .mathjax-pending is set by the config script,
+   so a missing bundle degrades to readable source rather than an empty box. */
+.eq{margin:16px 0 8px;padding:14px 12px;border-radius:10px;background:#edf6f3;border:1px solid #dcece7;
+    color:#0d554d;text-align:center;overflow-x:auto;overflow-y:hidden;
+    font:1.05rem/1.5 'Latin Modern Math','Cambria Math',Georgia,serif}
+.eq mjx-container{margin:0!important;max-width:100%}
+.mathjax-pending .eq,.mathjax-pending .m{visibility:hidden}
+.note{color:#60717c;margin:0 0 18px}
+.where{margin:14px 0 0;padding-top:12px;border-top:1px dashed #cfdcdb}
+.where dt{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7d8f96}
+.where dd{display:flex;gap:12px;align-items:baseline;margin:8px 0 0}
+.where .m{min-width:3.2rem}
+.where span:last-child{font-size:.9rem}
+@media(max-width:750px){.hero,.grid{grid-template-columns:1fr}}
+</style>
+<script src="/static/mathjax-config.js"></script>
+<script defer id="MathJax-script" src="/static/vendor/mathjax/tex-chtml-full.js"></script>
+</head>
+<body>
+<main>
+<a href="/">← Calculator</a>
+
+<section class="hero">
+  <div>
+    <p class="eyebrow">SCIENTIFIC GUIDE</p>
+    <h1>Expression evaluation</h1>
+    <p>The service parses an expression into a syntax tree, admits only numeric operations and approved functions, binds finite variables and an explicit angle convention, then evaluates one point or a bounded grid.</p>
+  </div>
+  <img src="/static/calculator-workflow.svg" alt="Safe scientific expression workflow">
+</section>
+
+<section class="grid">
+  <article class="card">
+    <h2>Algorithm</h2>
+    <ol>
+      <li>Normalize <code>^</code> to exponentiation.</li>
+      <li>Parse without executing Python source.</li>
+      <li>Reject attributes, imports, keywords, and unapproved nodes.</li>
+      <li>Bind constants and variables.</li>
+      <li>Evaluate and reject complex or non-finite results.</li>
+    </ol>
+  </article>
+
+  <article class="card">
+    <h2>Main equations</h2>
+
+    <div class="eq mathjax" role="math" aria-label="x_k equals x_0 plus k times delta x, for k from zero to N minus one">\[ x_{k} \;=\; x_{0} + k\,\Delta x, \qquad k = 0,1,\dots,N-1 \]</div>
+    <p class="note">A plot evaluates the same validated expression on a bounded uniform grid.</p>
+
+    <div class="eq mathjax" role="math" aria-label="N equals the floor of x stop minus x zero over delta x, plus one">\[ N \;=\; \left\lfloor \frac{x_{\text{stop}} - x_{0}}{\Delta x} \right\rfloor + 1 \]</div>
+    <p class="note">The sample count sets plot resolution and is checked against the 5,000-point limit.</p>
+
+    <div class="eq mathjax" role="math" aria-label="sine in degrees of alpha equals sine of pi alpha over 180">\[ \sin_{\deg}(\alpha) \;=\; \sin\!\left(\frac{\pi\,\alpha}{180}\right) \]</div>
+    <p class="note">Degree mode converts trigonometric inputs before applying the standard radian functions.</p>
+
+    <dl class="where">
+      <dt>where</dt>
+      <dd><span class="m mathjax">\(x_{0}\)</span><span>start of the plotted range</span></dd>
+      <dd><span class="m mathjax">\(\Delta x\)</span><span>positive step size</span></dd>
+      <dd><span class="m mathjax">\(N\)</span><span>number of sampled points, capped by the point limit</span></dd>
+      <dd><span class="m mathjax">\(\alpha\)</span><span>angle supplied in degrees</span></dd>
+    </dl>
+  </article>
+
+  <article class="card">
+    <h2>Critical inputs</h2>
+    <dl>
+      <dt>Expression</dt><dd>Defines operators, functions, constants, and variables.</dd>
+      <dt>Variables</dt><dd>Must bind every non-constant name to a finite number.</dd>
+      <dt>Angle unit</dt><dd>Controls trigonometric inputs and inverse-trigonometric outputs.</dd>
+      <dt>Range and step</dt><dd>Control sampling density and must remain below 5,000 points.</dd>
+    </dl>
+  </article>
+
+  <article class="card">
+    <h2>Limits</h2>
+    <ul>
+      <li>Numerical floating-point evaluation is not symbolic algebra.</li>
+      <li>Use Unit Converter when dimensions or physical units matter.</li>
+      <li>A curve visualizes the sampled formula; it does not validate a physical model.</li>
+    </ul>
+    <h2 style="margin-top:22px">Privacy</h2>
+    <p class="note">This service runs on the office intranet. Expressions are evaluated in memory for the duration of your request, nothing is stored, and no personal information is collected.</p>
+  </article>
+</section>
+</main>
+</body>
+</html>

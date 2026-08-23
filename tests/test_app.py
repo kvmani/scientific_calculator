@@ -21,6 +21,16 @@ def test_health_contract():
         response = client.get("/api/health")
     assert response.status_code == 200
     assert response.get_json()["tool_id"] == "scientific-calculator"
+    assert response.get_json()["version"] == "0.3.0"
+
+
+def test_scientific_help_and_security_headers():
+    with app.test_client() as client:
+        response = client.get("/help")
+    assert response.status_code == 200
+    assert b"SCIENTIFIC GUIDE" in response.data
+    assert b"calculator-workflow.svg" in response.data
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
 
 
 def test_evaluate_contract():

@@ -1,0 +1,4 @@
+# Vendored third-party assets ship byte-for-byte; do not rewrite line endings.
+src/**/static/vendor/** -text
+*.woff  binary
+*.woff2 binary

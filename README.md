@@ -1,5 +1,23 @@
 # Scientific Calculator
 
+## Release 0.3.0
+
+This release adds a comprehensive `/help` surface with the parser algorithm,
+angle equation, input roles, limitations, and an SVG workflow. It also adds
+production response headers and a Waitress-backed `scientific-calculator`
+entry point while preserving all 0.2 APIs.
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -e .
+scientific-calculator
+```
+
+Verify `GET /api/health` before switching the reverse proxy to port 5055. To
+roll back, reinstall the previous pinned wheel or Git tag and restart the
+service.
+
 Standalone local service for safe, reproducible engineering and scientific expressions. It is intentionally separate from the portal and from PyTex's crystallographic calculator.
 
 The browser UI supports named variables, `^` power notation, approved math functions, degree/radian modes, one-variable plots, and two-variable surface heatmaps. The API also keeps the legacy-compatible `/api/scientific_calculator/evaluate` and `/api/scientific_calculator/plot` routes.
