@@ -93,6 +93,13 @@ dd{margin:3px 0 15px;color:#60717c}
   </article>
 
   <article class="card">
+    <h2>Atom % ⇄ Mass %</h2>
+    <p>The Atom ⇄ Mass % tab converts between atomic (mole) fraction and mass fraction for a composition of chemical elements, using IUPAC conventional standard atomic weights.</p>
+    <div class="eq mathjax" role="math" aria-label="mass fraction of i equals atom fraction of i times atomic weight of i, over the sum of x j times M j">\[ w_{i} \;=\; \frac{x_{i}\,M_{i}}{\sum_{j} x_{j}\,M_{j}}, \qquad x_{i} \;=\; \frac{w_{i}/M_{i}}{\sum_{j} w_{j}/M_{j}} \]</div>
+    <p class="note">Input values do not need to sum to 100; they are normalized before conversion. Results include each element's atomic weight and the composition's mean atomic mass.</p>
+  </article>
+
+  <article class="card">
     <h2>Limits</h2>
     <ul>
       <li>Numerical floating-point evaluation is not symbolic algebra.</li>

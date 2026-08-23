@@ -11,10 +11,13 @@ from typing import Callable, Mapping
 
 from flask import Flask, Response, jsonify, render_template, request
 
+from .elements import ATOMIC_WEIGHTS
+
 app = Flask(__name__)
 MAX_EXPRESSION_LENGTH = 1024
 MAX_POINTS = 5000
-VERSION = "0.3.0"
+MAX_COMPOSITION_ELEMENTS = 24
+VERSION = "0.4.0"
 
 
 class ExpressionError(ValueError):
@@ -168,6 +171,63 @@ def plot_expression(expression: str, variables: list[VariableSpec], constants: M
     return {"mode": "2d", "expression": canonical, "points": points, "variables": [spec.__dict__ for spec in variables], "grid": {"x": ranges[0], "y": ranges[1], "z": surface}}
 
 
+def _composition(raw: object) -> dict[str, float]:
+    if not isinstance(raw, dict) or not raw:
+        raise ExpressionError("Provide at least one element and value")
+    if len(raw) > MAX_COMPOSITION_ELEMENTS:
+        raise ExpressionError(f"At most {MAX_COMPOSITION_ELEMENTS} elements are supported")
+    composition: dict[str, float] = {}
+    for symbol, value in raw.items():
+        element = str(symbol).strip()
+        if element not in ATOMIC_WEIGHTS:
+            raise ExpressionError(f"Unknown element symbol '{symbol}'")
+        try:
+            amount = float(value)
+        except (TypeError, ValueError) as error:
+            raise ExpressionError(f"Value for '{element}' must be numeric") from error
+        if amount < 0 or not math.isfinite(amount):
+            raise ExpressionError(f"Value for '{element}' must be a non-negative number")
+        composition[element] = composition.get(element, 0.0) + amount
+    if sum(composition.values()) <= 0:
+        raise ExpressionError("At least one element must have a positive value")
+    return composition
+
+
+def convert_composition(mode: str, raw_composition: object) -> dict[str, object]:
+    if mode not in {"atom_to_mass", "mass_to_atom"}:
+        raise ExpressionError("mode must be 'atom_to_mass' or 'mass_to_atom'")
+    composition = _composition(raw_composition)
+    total_in = sum(composition.values())
+    input_fraction = {element: value / total_in for element, value in composition.items()}
+
+    if mode == "atom_to_mass":
+        weighted = {element: fraction * ATOMIC_WEIGHTS[element] for element, fraction in input_fraction.items()}
+    else:
+        weighted = {element: fraction / ATOMIC_WEIGHTS[element] for element, fraction in input_fraction.items()}
+    total_out = sum(weighted.values())
+    output_fraction = {element: value / total_out for element, value in weighted.items()}
+
+    molar_mass = sum(fraction * ATOMIC_WEIGHTS[element] for element, fraction in (
+        input_fraction if mode == "atom_to_mass" else output_fraction
+    ).items())
+
+    input_key = "atom_fraction" if mode == "atom_to_mass" else "mass_fraction"
+    output_key = "mass_fraction" if mode == "atom_to_mass" else "atom_fraction"
+    elements = sorted(composition, key=lambda element: -composition[element])
+    return {
+        "mode": mode,
+        input_key: {element: input_fraction[element] for element in elements},
+        output_key: {element: output_fraction[element] for element in elements},
+        "percent": {
+            input_key: {element: input_fraction[element] * 100 for element in elements},
+            output_key: {element: output_fraction[element] * 100 for element in elements},
+        },
+        "atomic_weights": {element: ATOMIC_WEIGHTS[element] for element in elements},
+        "molar_mass_g_per_mol": molar_mass,
+        "elements": elements,
+    }
+
+
 def _payload(): return request.get_json(silent=True) or {}
 
 
@@ -210,6 +270,20 @@ def api_plot():
         variables = [VariableSpec(str(item["name"]), float(item["start"]), float(item["stop"]), float(item["step"])) for item in payload.get("variables", [])]
         return jsonify({"ok": True, **plot_expression(payload.get("expression", ""), variables, payload.get("constants"), payload.get("angle_unit", "radian"))})
     except (KeyError, ExpressionError, TypeError, ValueError, ZeroDivisionError, OverflowError) as error: return jsonify({"ok": False, "error": str(error)}), 400
+
+
+@app.get("/api/elements")
+def api_elements(): return jsonify({"ok": True, "elements": ATOMIC_WEIGHTS})
+
+
+@app.post("/api/composition/convert")
+def api_composition_convert():
+    payload = _payload()
+    try:
+        mode = payload.get("mode", "atom_to_mass")
+        return jsonify({"ok": True, **convert_composition(mode, payload.get("composition"))})
+    except (ExpressionError, TypeError, ValueError, ZeroDivisionError, OverflowError) as error:
+        return jsonify({"ok": False, "error": str(error)}), 400
 
 
 def main() -> None:  # pragma: no cover

@@ -1,5 +1,11 @@
 # Scientific Calculator
 
+## Release 0.4.0
+
+This release adds an "Atom % ⇄ Mass %" composition tab, converting between atomic
+(mole) fraction and mass fraction for a list of elements using IUPAC conventional
+standard atomic weights (`GET /api/elements`, `POST /api/composition/convert`).
+
 ## Release 0.3.0
 
 This release adds a comprehensive `/help` surface with the parser algorithm,
@@ -20,7 +26,7 @@ service.
 
 Standalone local service for safe, reproducible engineering and scientific expressions. It is intentionally separate from the portal and from PyTex's crystallographic calculator.
 
-The browser UI supports named variables, `^` power notation, approved math functions, degree/radian modes, one-variable plots, and two-variable surface heatmaps. The API also keeps the legacy-compatible `/api/scientific_calculator/evaluate` and `/api/scientific_calculator/plot` routes.
+The browser UI supports named variables, `^` power notation, approved math functions, degree/radian modes, one-variable plots, two-variable surface heatmaps, and atom-fraction/mass-fraction composition conversion. The API also keeps the legacy-compatible `/api/scientific_calculator/evaluate` and `/api/scientific_calculator/plot` routes.
 
 ## Run
 

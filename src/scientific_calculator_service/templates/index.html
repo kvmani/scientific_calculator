@@ -169,6 +169,37 @@
         gap: 12px;
         flex-wrap: wrap;
       }
+      .composition-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 32px;
+        gap: 8px;
+        align-items: center;
+        margin: 8px 0;
+      }
+      .composition-row select,
+      .composition-row input {
+        width: 100%;
+      }
+      .composition-row button {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      table.composition-table {
+        width: 100%;
+        border-collapse: collapse;
+        font: 0.95rem ui-monospace, monospace;
+        margin-top: 4px;
+      }
+      table.composition-table th,
+      table.composition-table td {
+        text-align: left;
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--line);
+      }
       @media (max-width: 700px) {
         main {
           padding: 38px 16px;
@@ -199,7 +230,8 @@
       </p>
       <div class="tabs">
         <button class="tab active" data-panel="evaluate-panel">Evaluate</button
-        ><button class="tab" data-panel="plot-panel">Plot function</button>
+        ><button class="tab" data-panel="plot-panel">Plot function</button
+        ><button class="tab" data-panel="composition-panel">Atom ⇄ Mass %</button>
       </div>
       <section id="evaluate-panel" class="panel">
         <div class="grid">
@@ -317,6 +349,36 @@
             aria-label="Function plot"
           ></canvas>
         </div>
+      </section>
+      <section id="composition-panel" class="panel hidden">
+        <div class="grid">
+          <div class="field">
+            <label for="composition-mode">Convert</label
+            ><select id="composition-mode">
+              <option value="atom_to_mass">Atom % → Mass %</option>
+              <option value="mass_to_atom">Mass % → Atom %</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="button" id="composition-add-row" type="button">
+              + Add element
+            </button>
+          </div>
+        </div>
+        <div class="field wide">
+          <label id="composition-input-label">Element and atom %</label>
+          <div id="composition-rows"></div>
+          <span class="hint"
+            >Values do not need to sum to 100; they are normalized
+            automatically.</span
+          >
+        </div>
+        <div class="actions">
+          <button class="button" id="composition-convert">Convert →</button>
+        </div>
+        <div class="result" id="composition-result">Ready.</div>
+        <div class="meta" id="composition-meta"></div>
       </section>
     </main>
     <script>
@@ -457,6 +519,79 @@
           : d.error;
         if (d.ok) draw(d);
       };
+
+      let elementSymbols = [];
+      function compositionOptions(selected) {
+        return elementSymbols
+          .map(
+            (sym) =>
+              `<option value="${sym}"${sym === selected ? " selected" : ""}>${sym}</option>`,
+          )
+          .join("");
+      }
+      function addCompositionRow(symbol, value) {
+        const rows = $("composition-rows");
+        const row = document.createElement("div");
+        row.className = "composition-row";
+        row.innerHTML = `<select class="comp-element">${compositionOptions(symbol)}</select><input class="comp-value" type="number" step="any" min="0" value="${value}" aria-label="value" /><button type="button" class="comp-remove" title="Remove">×</button>`;
+        row.querySelector(".comp-remove").onclick = () => {
+          if (rows.children.length > 1) row.remove();
+        };
+        rows.appendChild(row);
+      }
+      function readComposition() {
+        const composition = {};
+        document.querySelectorAll(".composition-row").forEach((row) => {
+          const el = row.querySelector(".comp-element").value;
+          const val = +row.querySelector(".comp-value").value;
+          if (el && !Number.isNaN(val)) composition[el] = (composition[el] || 0) + val;
+        });
+        return composition;
+      }
+      $("composition-add-row").onclick = () => addCompositionRow(elementSymbols[0] || "Fe", 0);
+      $("composition-mode").onchange = () => {
+        $("composition-input-label").textContent =
+          $("composition-mode").value === "atom_to_mass"
+            ? "Element and atom %"
+            : "Element and mass %";
+      };
+      $("composition-convert").onclick = async () => {
+        const d = await post("/api/composition/convert", {
+          mode: $("composition-mode").value,
+          composition: readComposition(),
+        });
+        if (!d.ok) {
+          $("composition-result").textContent = d.error;
+          $("composition-meta").textContent = "";
+          return;
+        }
+        const inputKey = d.mode === "atom_to_mass" ? "atom_fraction" : "mass_fraction";
+        const outputKey = d.mode === "atom_to_mass" ? "mass_fraction" : "atom_fraction";
+        const inputLabel = d.mode === "atom_to_mass" ? "Atom %" : "Mass %";
+        const outputLabel = d.mode === "atom_to_mass" ? "Mass %" : "Atom %";
+        const rows = d.elements
+          .map(
+            (el) =>
+              `<tr><td>${el}</td><td>${(d.percent[inputKey][el]).toFixed(3)}</td><td>${(d.percent[outputKey][el]).toFixed(3)}</td><td>${d.atomic_weights[el]}</td></tr>`,
+          )
+          .join("");
+        $("composition-result").innerHTML =
+          `<table class="composition-table"><thead><tr><th>Element</th><th>${inputLabel}</th><th>${outputLabel}</th><th>Atomic wt.</th></tr></thead><tbody>${rows}</tbody></table>`;
+        $("composition-meta").textContent =
+          `Mean atomic mass: ${d.molar_mass_g_per_mol.toFixed(4)} g/mol`;
+      };
+      fetch("/api/elements")
+        .then((r) => r.json())
+        .then((d) => {
+          elementSymbols = Object.keys(d.elements || {}).sort();
+          const rows = $("composition-rows");
+          rows.innerHTML = "";
+          [
+            ["Fe", 70],
+            ["Cr", 19],
+            ["Ni", 11],
+          ].forEach(([sym, val]) => addCompositionRow(sym, val));
+        });
     </script>
     <script src="/static/browser_support.js"></script>
   </body>

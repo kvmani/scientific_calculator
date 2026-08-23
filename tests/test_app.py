@@ -1,6 +1,6 @@
 import ast
 
-from app import app, evaluate, plot_expression, VariableSpec, ExpressionError, _canonical, _evaluate
+from app import app, convert_composition, evaluate, plot_expression, VariableSpec, ExpressionError, _canonical, _evaluate
 
 
 def test_evaluate_scientific_expression():
@@ -21,7 +21,7 @@ def test_health_contract():
         response = client.get("/api/health")
     assert response.status_code == 200
     assert response.get_json()["tool_id"] == "scientific-calculator"
-    assert response.get_json()["version"] == "0.3.0"
+    assert response.get_json()["version"] == "0.4.0"
 
 
 def test_scientific_help_and_security_headers():
@@ -98,3 +98,50 @@ def test_plot_rejects_invalid_ranges_and_payloads():
             pass
         else:
             raise AssertionError("unsupported AST was accepted")
+
+
+def test_atom_to_mass_fraction_matches_known_stainless_steel():
+    result = convert_composition("atom_to_mass", {"Fe": 70, "Cr": 19, "Ni": 11})
+    assert result["mode"] == "atom_to_mass"
+    assert abs(sum(result["mass_fraction"].values()) - 1.0) < 1e-9
+    # Cr (lightest, 52.0) should lose mass share; Ni (heaviest, 58.69) should gain it.
+    assert result["mass_fraction"]["Cr"] < result["atom_fraction"]["Cr"]
+    assert result["mass_fraction"]["Ni"] > result["atom_fraction"]["Ni"]
+    assert result["elements"] == ["Fe", "Cr", "Ni"]
+
+
+def test_mass_to_atom_fraction_round_trips_atom_to_mass():
+    forward = convert_composition("atom_to_mass", {"Fe": 70, "Cr": 19, "Ni": 11})
+    back = convert_composition("mass_to_atom", forward["percent"]["mass_fraction"])
+    for element in ("Fe", "Cr", "Ni"):
+        assert abs(back["atom_fraction"][element] - forward["atom_fraction"][element]) < 1e-6
+
+
+def test_composition_conversion_rejects_bad_input():
+    for mode, composition in (
+        ("atom_to_mass", {}),
+        ("atom_to_mass", {"Zz": 1}),
+        ("atom_to_mass", {"Fe": -1}),
+        ("atom_to_mass", {"Fe": "nope"}),
+        ("bad_mode", {"Fe": 1}),
+    ):
+        try:
+            convert_composition(mode, composition)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError((mode, composition))
+
+
+def test_composition_api_contract():
+    with app.test_client() as client:
+        response = client.post(
+            "/api/composition/convert",
+            json={"mode": "atom_to_mass", "composition": {"Fe": 70, "Cr": 19, "Ni": 11}},
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["ok"] is True
+        assert set(data["elements"]) == {"Fe", "Cr", "Ni"}
+        assert client.get("/api/elements").get_json()["elements"]["Fe"] == 55.845
+        assert client.post("/api/composition/convert", json={"composition": {}}).status_code == 400
