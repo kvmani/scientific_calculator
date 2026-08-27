@@ -1,5 +1,25 @@
 # Scientific Calculator
 
+## Release 0.5.0
+
+This release adds a **Periodic Table** tab: all 118 elements, clickable, with the
+properties a working scientist looks up — atomic mass, group, period, block,
+category, electron configuration and electrons per shell, oxidation states,
+electronegativity, first ionization energy, atomic radius, state at room
+temperature, melting and boiling points, density, crystal structure,
+radioactivity, crustal abundance and discovery. Shade the table by category,
+block, state, electronegativity, melting point or density; search by name,
+symbol or atomic number. `GET /api/periodic_table` returns the whole table in one
+request and `GET /api/periodic_table/<symbol>` returns one element, so the tab
+works with no outside connection.
+
+Most of the table is derived rather than transcribed — group, period and block
+from the layout, the electron configuration from the Madelung ordering with its
+established exceptions listed explicitly, the state at room temperature from the
+transition points, and the atomic mass from the same table the composition
+converter uses. An absent value says which absence it is: "not measured",
+"known since antiquity" and "made, not found" are different facts.
+
 ## Release 0.4.0
 
 This release adds an "Atom % ⇄ Mass %" composition tab, converting between atomic
@@ -26,7 +46,7 @@ service.
 
 Standalone local service for safe, reproducible engineering and scientific expressions. It is intentionally separate from the portal and from PyTex's crystallographic calculator.
 
-The browser UI supports named variables, `^` power notation, approved math functions, degree/radian modes, one-variable plots, two-variable surface heatmaps, and atom-fraction/mass-fraction composition conversion. The API also keeps the legacy-compatible `/api/scientific_calculator/evaluate` and `/api/scientific_calculator/plot` routes.
+The browser UI supports named variables, `^` power notation, approved math functions, degree/radian modes, one-variable plots, two-variable surface heatmaps, atom-fraction/mass-fraction composition conversion, and a full periodic table of the elements. The API also keeps the legacy-compatible `/api/scientific_calculator/evaluate` and `/api/scientific_calculator/plot` routes.
 
 ## Run
 

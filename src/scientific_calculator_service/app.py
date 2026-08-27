@@ -12,12 +12,13 @@ from typing import Callable, Mapping
 from flask import Flask, Response, jsonify, render_template, request
 
 from .elements import ATOMIC_WEIGHTS
+from .periodic_table import element_by_symbol, periodic_table
 
 app = Flask(__name__)
 MAX_EXPRESSION_LENGTH = 1024
 MAX_POINTS = 5000
 MAX_COMPOSITION_ELEMENTS = 24
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 
 
 class ExpressionError(ValueError):
@@ -274,6 +275,28 @@ def api_plot():
 
 @app.get("/api/elements")
 def api_elements(): return jsonify({"ok": True, "elements": ATOMIC_WEIGHTS})
+
+
+@app.get("/api/periodic_table")
+@app.get("/api/scientific_calculator/periodic_table")
+def api_periodic_table():
+    """The whole table in one request.
+
+    All 118 elements are about 60 kB of JSON, which is smaller than a single
+    round trip per element would cost and lets the grid render and filter with
+    no further network use at all — the point of a tool that has to work on an
+    intranet with no outside access.
+    """
+
+    return jsonify({"ok": True, **periodic_table()})
+
+
+@app.get("/api/periodic_table/<symbol>")
+def api_periodic_table_element(symbol: str):
+    element = element_by_symbol(symbol)
+    if element is None:
+        return jsonify({"ok": False, "error": f"Unknown element symbol '{symbol}'"}), 404
+    return jsonify({"ok": True, "element": element})
 
 
 @app.post("/api/composition/convert")

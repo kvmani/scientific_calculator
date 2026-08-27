@@ -188,6 +188,177 @@
         color: var(--muted);
         font-weight: 800;
       }
+      /* The periodic table proper: an 18-column grid, with the f block
+         detached two rows below where it belongs, as every printed table
+         draws it. */
+      .ptable {
+        display: grid;
+        grid-template-columns: repeat(18, minmax(0, 1fr));
+        gap: 3px;
+        margin-top: 6px;
+      }
+      .ptable-scroll {
+        overflow-x: auto;
+        padding-bottom: 8px;
+      }
+      .ptable-inner {
+        min-width: 900px;
+      }
+      .pcell {
+        position: relative;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 4px 3px 3px;
+        cursor: pointer;
+        text-align: center;
+        line-height: 1.15;
+        font-family: inherit;
+        color: inherit;
+        transition:
+          transform 0.08s ease,
+          box-shadow 0.08s ease;
+      }
+      .pcell:hover,
+      .pcell:focus-visible {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 14px #183b5633;
+        outline: none;
+        border-color: var(--ink);
+      }
+      .pcell[aria-pressed="true"] {
+        border-color: var(--ink);
+        box-shadow: 0 0 0 2px var(--ink);
+      }
+      .pcell .pz {
+        display: block;
+        font-size: 9px;
+        color: #00000099;
+      }
+      .pcell .psym {
+        display: block;
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .pcell .pname {
+        display: block;
+        font-size: 8px;
+        color: #00000099;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .pcell.dimmed {
+        opacity: 0.22;
+      }
+      /* Category colours. Chosen to stay distinguishable in greyscale by
+         lightness as well as by hue, since these pages get printed. */
+      .cat-alkali-metal { background: #ffd9c2; }
+      .cat-alkaline-earth-metal { background: #ffeab8; }
+      .cat-transition-metal { background: #d8e6f5; }
+      .cat-post-transition-metal { background: #cfe6df; }
+      .cat-metalloid { background: #e2dcf2; }
+      .cat-reactive-nonmetal { background: #d6f0c9; }
+      .cat-noble-gas { background: #fbd3e2; }
+      .cat-lanthanide { background: #cfe9f2; }
+      .cat-actinide { background: #f2dcc9; }
+      .cat-unknown-properties { background: #e6e6e6; }
+      .plegend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 12px;
+        margin: 14px 0 0;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .plegend button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font: inherit;
+        font-size: 11px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .plegend button[aria-pressed="true"] {
+        border-color: var(--ink);
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .plegend .swatch {
+        width: 11px;
+        height: 11px;
+        border-radius: 3px;
+        border: 1px solid #00000022;
+      }
+      .pdetail {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        background: #fbfcfa;
+      }
+      .pdetail-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .pdetail-tile {
+        border-radius: 10px;
+        padding: 10px 14px;
+        min-width: 96px;
+        text-align: center;
+      }
+      .pdetail-tile .psym {
+        font-size: 34px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .pdetail-tile .pz {
+        font-size: 11px;
+        color: #00000099;
+      }
+      .pdetail h2 {
+        margin: 0 0 2px;
+        font: 700 1.5rem/1.1 Georgia, serif;
+      }
+      .pdetail .pdetail-sub {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      table.pprops {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 14px;
+        font-size: 13px;
+      }
+      table.pprops th,
+      table.pprops td {
+        border-bottom: 1px solid var(--line);
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: top;
+      }
+      table.pprops th {
+        width: 46%;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      table.pprops .unmeasured {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .pgroup-title {
+        margin: 18px 0 4px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        color: var(--accent);
+      }
       table.composition-table {
         width: 100%;
         border-collapse: collapse;
@@ -225,13 +396,16 @@
       <p class="eyebrow">OFFICE SCIENTIFIC TOOLS · PRODUCTIVITY</p>
       <h1>Scientific Calculator</h1>
       <p class="lede">
-        Evaluate expressions with named variables, then plot one-variable curves
-        or two-variable mesh surfaces locally.
+        Evaluate expressions with named variables, plot one-variable curves or
+        two-variable mesh surfaces, convert between atom and mass fractions, and
+        look up any element in the periodic table — all computed locally, with no
+        outside connection.
       </p>
       <div class="tabs">
         <button class="tab active" data-panel="evaluate-panel">Evaluate</button
         ><button class="tab" data-panel="plot-panel">Plot function</button
-        ><button class="tab" data-panel="composition-panel">Atom ⇄ Mass %</button>
+        ><button class="tab" data-panel="composition-panel">Atom ⇄ Mass %</button
+        ><button class="tab" data-panel="periodic-panel">Periodic Table</button>
       </div>
       <section id="evaluate-panel" class="panel">
         <div class="grid">
@@ -379,6 +553,38 @@
         </div>
         <div class="result" id="composition-result">Ready.</div>
         <div class="meta" id="composition-meta"></div>
+      </section>
+      <section id="periodic-panel" class="panel hidden">
+        <div class="grid">
+          <div class="field">
+            <label for="ptable-search">Find an element</label
+            ><input
+              id="ptable-search"
+              placeholder="iron, Fe, or 26"
+              autocomplete="off"
+            /><span class="hint">Name, symbol or atomic number.</span>
+          </div>
+          <div class="field">
+            <label for="ptable-colour">Shade cells by</label
+            ><select id="ptable-colour">
+              <option value="category">Category</option>
+              <option value="state_at_room_temperature">State at room temperature</option>
+              <option value="block">Block (s, p, d, f)</option>
+              <option value="electronegativity_pauling">Electronegativity</option>
+              <option value="melting_point_k">Melting point</option>
+              <option value="density_g_per_cm3">Density</option>
+            </select>
+          </div>
+        </div>
+        <div class="ptable-scroll">
+          <div class="ptable-inner">
+            <div class="ptable" id="ptable-main" role="grid" aria-label="Periodic table, main body"></div>
+            <p class="pgroup-title">LANTHANIDES AND ACTINIDES</p>
+            <div class="ptable" id="ptable-f" role="grid" aria-label="Periodic table, f block"></div>
+          </div>
+        </div>
+        <div class="plegend" id="ptable-legend"></div>
+        <div class="pdetail" id="ptable-detail">Loading the table…</div>
       </section>
     </main>
     <script>
@@ -591,6 +797,259 @@
             ["Cr", 19],
             ["Ni", 11],
           ].forEach(([sym, val]) => addCompositionRow(sym, val));
+        });
+
+      /* ------------------------------------------------------------------
+         Periodic table.
+
+         The whole table arrives in one request and everything after that —
+         shading, filtering, search, the detail view — is local, because this
+         tool is used on an intranet where a round trip per click is exactly
+         what makes a reference table not worth opening.
+         ------------------------------------------------------------------ */
+      let ptableElements = [];
+      let ptableSelected = null;
+      let ptableCategoryFilter = null;
+      let ptableQuery = "";
+
+      /* Both ways of narrowing the table dim the same cells, and selecting an
+         element re-renders the grid, so the filters have to be state the render
+         reads rather than a class applied to the DOM afterwards - otherwise the
+         next render silently throws them away. */
+      const ptableMatches = (element) => {
+        if (ptableCategoryFilter && element.category !== ptableCategoryFilter) return false;
+        if (!ptableQuery) return true;
+        return (
+          element.name.toLowerCase().startsWith(ptableQuery) ||
+          element.symbol.toLowerCase() === ptableQuery ||
+          String(element.atomic_number) === ptableQuery
+        );
+      };
+
+      const slug = (value) =>
+        String(value == null ? "unknown" : value)
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-");
+
+      /* An unmeasured property is shown as an explicit statement rather than a
+         blank cell, because a blank reads as an oversight and these absences
+         are the honest answer: most of period 7 has never been measured. */
+      const unmeasured = '<span class="unmeasured">not measured</span>';
+      const show = (value, unit, digits) => {
+        if (value === null || value === undefined || value === "") return unmeasured;
+        const text =
+          typeof value === "number" && digits !== undefined ? value.toFixed(digits) : value;
+        return unit ? text + " " + unit : String(text);
+      };
+
+      /* Shading by a continuous property uses a single-hue ramp over the range
+         actually present, so the colour means "high or low within this table"
+         rather than an absolute the reader has no scale for. An element with no
+         measured value stays grey instead of being placed at one end of the
+         ramp, which would assert a measurement that does not exist. */
+      function shadeFor(element, mode) {
+        if (mode === "category") return { cls: "cat-" + slug(element.category), style: "" };
+        if (mode === "block" || mode === "state_at_room_temperature") {
+          const palette = {
+            s: "#ffd9c2",
+            p: "#d6f0c9",
+            d: "#d8e6f5",
+            f: "#cfe9f2",
+            solid: "#d8e6f5",
+            liquid: "#cfe6df",
+            gas: "#ffeab8",
+          };
+          return { cls: "", style: "background:" + (palette[element[mode]] || "#e6e6e6") };
+        }
+        const values = ptableElements
+          .map((item) => item[mode])
+          .filter((value) => typeof value === "number");
+        const low = Math.min.apply(null, values);
+        const high = Math.max.apply(null, values);
+        const value = element[mode];
+        if (typeof value !== "number") return { cls: "", style: "background:#e6e6e6" };
+        const fraction = high === low ? 0.5 : (value - low) / (high - low);
+        return { cls: "", style: "background:hsl(205 62% " + (94 - 46 * fraction) + "%)" };
+      }
+
+      function renderPeriodicTable() {
+        const mode = $("ptable-colour").value;
+        const main = $("ptable-main");
+        const fBlock = $("ptable-f");
+        main.innerHTML = "";
+        fBlock.innerHTML = "";
+        ptableElements.forEach((element) => {
+          const cell = document.createElement("button");
+          cell.type = "button";
+          cell.className = "pcell";
+          const shade = shadeFor(element, mode);
+          if (shade.cls) cell.classList.add(shade.cls);
+          if (shade.style) cell.setAttribute("style", shade.style);
+          cell.style.gridColumn = element.grid_column;
+          cell.dataset.symbol = element.symbol;
+          cell.setAttribute(
+            "aria-label",
+            element.name +
+              ", symbol " +
+              element.symbol +
+              ", atomic number " +
+              element.atomic_number,
+          );
+          cell.setAttribute("aria-pressed", String(ptableSelected === element.symbol));
+          if (!ptableMatches(element)) cell.classList.add("dimmed");
+          cell.innerHTML =
+            '<span class="pz">' +
+            element.atomic_number +
+            '</span><span class="psym">' +
+            element.symbol +
+            '</span><span class="pname">' +
+            element.name +
+            "</span>";
+          cell.onclick = () => selectElement(element.symbol);
+          const inFBlock = element.grid_row > 7;
+          if (!inFBlock) cell.style.gridRow = element.grid_row;
+          (inFBlock ? fBlock : main).append(cell);
+        });
+      }
+
+      function renderLegend() {
+        const legend = $("ptable-legend");
+        const mode = $("ptable-colour").value;
+        legend.innerHTML = "";
+        if (mode === "block" || mode === "state_at_room_temperature") {
+          // A categorical shading has no high and low, so saying "darker is
+          // higher" here would describe a scale that is not being drawn.
+          legend.textContent =
+            "One colour per value. Grey means the value is not known for this element.";
+          return;
+        }
+        if (mode !== "category") {
+          legend.textContent =
+            "Darker is higher. Grey means no measured value for this property.";
+          return;
+        }
+        const seen = [];
+        ptableElements.forEach((element) => {
+          if (seen.indexOf(element.category) === -1) seen.push(element.category);
+        });
+        seen.forEach((category) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.setAttribute("aria-pressed", String(ptableCategoryFilter === category));
+          button.innerHTML =
+            '<span class="swatch cat-' + slug(category) + '"></span>' + category;
+          button.onclick = () => {
+            ptableCategoryFilter = ptableCategoryFilter === category ? null : category;
+            renderPeriodicTable();
+            renderLegend();
+          };
+          legend.append(button);
+        });
+      }
+
+      function selectElement(symbol) {
+        const element = ptableElements.find((item) => item.symbol === symbol);
+        if (!element) return;
+        ptableSelected = symbol;
+        const configuration =
+          show(element.electron_configuration) +
+          (element.electron_configuration_is_exception
+            ? ' <span class="unmeasured">— an exception to the Madelung ordering</span>'
+            : "");
+        const rows = [
+          ["Atomic number", show(element.atomic_number)],
+          ["Standard atomic weight", show(element.atomic_mass, "u")],
+          [
+            "Group / period / block",
+            (element.group === null ? "f block" : element.group) +
+              " / " +
+              element.period +
+              " / " +
+              element.block,
+          ],
+          ["Category", show(element.category)],
+          ["Electron configuration", configuration],
+          ["Electrons per shell", element.shell_electrons.join(", ")],
+          [
+            "Valence electrons",
+            element.valence_electrons === null
+              ? '<span class="unmeasured">not one number outside the s and p blocks</span>'
+              : show(element.valence_electrons),
+          ],
+          ["Common oxidation states", show(element.common_oxidation_states)],
+          ["Electronegativity (Pauling)", show(element.electronegativity_pauling)],
+          ["First ionization energy", show(element.first_ionization_kj_per_mol, "kJ/mol", 1)],
+          ["Atomic radius", show(element.atomic_radius_pm, "pm")],
+          ["State at room temperature", show(element.state_at_room_temperature)],
+          ["Melting point", show(element.melting_point_k, "K", 2)],
+          ["Boiling point", show(element.boiling_point_k, "K", 2)],
+          ["Density", show(element.density_g_per_cm3, "g/cm³")],
+          ["Crystal structure", show(element.crystal_structure)],
+          ["Radioactive", element.radioactive ? "yes — no stable isotope" : "no"],
+          [
+            "Abundance in Earth's crust",
+            element.synthetic
+              ? "none — made, not found"
+              : show(element.crustal_abundance_mg_per_kg, "mg/kg"),
+          ],
+          [
+            "Discovered",
+            element.known_since_antiquity
+              ? "known since antiquity"
+              : show(element.discovery_year),
+          ],
+        ];
+        const tile = "cat-" + slug(element.category);
+        $("ptable-detail").innerHTML =
+          '<div class="pdetail-head"><div class="pdetail-tile ' +
+          tile +
+          '"><div class="pz">' +
+          element.atomic_number +
+          '</div><div class="psym">' +
+          element.symbol +
+          '</div><div class="pz">' +
+          element.atomic_mass +
+          "</div></div><div><h2>" +
+          element.name +
+          '</h2><p class="pdetail-sub">' +
+          element.category +
+          " · " +
+          element.block +
+          " block · period " +
+          element.period +
+          (element.group === null ? "" : " · group " + element.group) +
+          '</p></div></div><table class="pprops"><tbody>' +
+          rows
+            .map((row) => "<tr><th>" + row[0] + "</th><td>" + row[1] + "</td></tr>")
+            .join("") +
+          "</tbody></table>";
+        renderPeriodicTable();
+      }
+
+      $("ptable-colour").onchange = () => {
+        renderPeriodicTable();
+        renderLegend();
+      };
+      $("ptable-search").oninput = (event) => {
+        ptableQuery = event.target.value.trim().toLowerCase();
+        const matches = ptableElements.filter(ptableMatches);
+        // One hit is unambiguous, so open it; several means keep looking.
+        if (ptableQuery && matches.length === 1) selectElement(matches[0].symbol);
+        else renderPeriodicTable();
+      };
+
+      fetch("/api/periodic_table")
+        .then((response) => response.json())
+        .then((data) => {
+          if (!data.ok) throw new Error(data.error || "Could not load the periodic table");
+          ptableElements = data.elements;
+          renderPeriodicTable();
+          renderLegend();
+          selectElement("Fe");
+        })
+        .catch((error) => {
+          $("ptable-detail").textContent =
+            "Could not load the periodic table: " + error.message;
         });
     </script>
     <script src="/static/browser_support.js"></script>

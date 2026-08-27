@@ -17,11 +17,27 @@ def test_rejects_arbitrary_code():
 
 
 def test_health_contract():
+    """The served version must be the packaged one, not a third copy of a string.
+
+    Transcribing the version here made the test assert only that nobody had
+    edited this line, which is how the packaged version and the served version
+    came to disagree without anything failing. Reading both is what catches it.
+    """
+
+    import re
+    from pathlib import Path
+
+    from app import VERSION
+
     with app.test_client() as client:
         response = client.get("/api/health")
     assert response.status_code == 200
     assert response.get_json()["tool_id"] == "scientific-calculator"
-    assert response.get_json()["version"] == "0.4.0"
+    assert response.get_json()["version"] == VERSION
+
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    packaged = re.search(r'^version = "([^"]+)"', pyproject.read_text(encoding="utf-8"), re.M)
+    assert packaged and packaged.group(1) == VERSION
 
 
 def test_scientific_help_and_security_headers():
