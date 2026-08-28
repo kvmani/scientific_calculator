@@ -12,13 +12,16 @@ from typing import Callable, Mapping
 from flask import Flask, Response, jsonify, render_template, request
 
 from .elements import ATOMIC_WEIGHTS
-from .periodic_table import element_by_symbol, periodic_table
+from .periodic_table import element_by_symbol, lines_near, periodic_table
+from .sources import sources
 
 app = Flask(__name__)
 MAX_EXPRESSION_LENGTH = 1024
 MAX_POINTS = 5000
 MAX_COMPOSITION_ELEMENTS = 24
-VERSION = "0.5.0"
+#: Enough candidates for a spectrum peak to choose between, not a data dump.
+MAX_XRAY_MATCHES = 60
+VERSION = "0.6.0"
 
 
 class ExpressionError(ValueError):
@@ -292,11 +295,99 @@ def api_periodic_table():
 
 
 @app.get("/api/periodic_table/<symbol>")
+@app.get("/api/scientific_calculator/periodic_table/<symbol>")
 def api_periodic_table_element(symbol: str):
+    """One element in full, including its X-ray tables and its prose.
+
+    The whole-table endpoint omits those to keep the first load small, so this
+    is where a detail view gets them - about ten kilobytes for an element,
+    against the eight hundred it would cost to ship all 118 up front.
+    """
+
     element = element_by_symbol(symbol)
     if element is None:
         return jsonify({"ok": False, "error": f"Unknown element symbol '{symbol}'"}), 404
     return jsonify({"ok": True, "element": element})
+
+
+@app.get("/api/sources")
+@app.get("/api/scientific_calculator/sources")
+def api_sources():
+    """Where each group of properties came from, with links to check it."""
+
+    return jsonify({"ok": True, **sources()})
+
+
+@app.get("/api/xray/<symbol>")
+@app.get("/api/scientific_calculator/xray/<symbol>")
+def api_xray_element(symbol: str):
+    """Just the X-ray lines and edges for one element."""
+
+    element = element_by_symbol(symbol)
+    if element is None:
+        return jsonify({"ok": False, "error": f"Unknown element symbol '{symbol}'"}), 404
+    return jsonify(
+        {
+            "ok": True,
+            "symbol": element["symbol"],
+            "name": element["name"],
+            "atomic_number": element["atomic_number"],
+            "has_xray_data": element["has_xray_data"],
+            "lines": element["xray_lines"],
+            "edges": element["xray_edges"],
+        }
+    )
+
+
+def _identify(params: Mapping[str, object]) -> dict[str, object]:
+    """Which characteristic lines could produce a peak at a measured energy.
+
+    Energies may be given in keV or eV. Reporting which unit was used back to
+    the caller is not padding: 8 keV and 8 eV are both plausible-looking numbers
+    to type, and a result that silently answered the other question would look
+    exactly like a right answer.
+    """
+
+    if "energy_kev" in params and params.get("energy_kev") not in (None, ""):
+        energy_ev = float(params["energy_kev"]) * 1000.0
+        unit = "keV"
+    elif "energy_ev" in params and params.get("energy_ev") not in (None, ""):
+        energy_ev = float(params["energy_ev"])
+        unit = "eV"
+    else:
+        raise ExpressionError("Provide energy_kev or energy_ev")
+    if not math.isfinite(energy_ev) or energy_ev <= 0:
+        raise ExpressionError("Energy must be a positive number")
+    tolerance = float(params.get("tolerance_ev") or 50.0)
+    minimum = float(params.get("min_intensity") or 0.01)
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise ExpressionError("tolerance_ev must not be negative")
+    if not 0.0 <= minimum <= 1.0:
+        raise ExpressionError("min_intensity must be between 0 and 1")
+    matches = lines_near(energy_ev, tolerance, minimum)
+    return {
+        "energy_ev": energy_ev,
+        "energy_kev": energy_ev / 1000.0,
+        "unit_supplied": unit,
+        "tolerance_ev": tolerance,
+        "min_intensity": minimum,
+        "matches": matches[:MAX_XRAY_MATCHES],
+        "match_count": len(matches),
+        "truncated": len(matches) > MAX_XRAY_MATCHES,
+    }
+
+
+@app.get("/api/xray/identify")
+@app.post("/api/xray/identify")
+@app.get("/api/scientific_calculator/xray/identify")
+def api_xray_identify():
+    """Answer the question an unlabelled spectrum peak actually poses."""
+
+    params = dict(request.args) | _payload() if request.method == "POST" else dict(request.args)
+    try:
+        return jsonify({"ok": True, **_identify(params)})
+    except (ExpressionError, TypeError, ValueError) as error:
+        return jsonify({"ok": False, "error": str(error)}), 400
 
 
 @app.post("/api/composition/convert")

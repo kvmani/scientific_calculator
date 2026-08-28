@@ -35,15 +35,24 @@ Sources
 
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
+from .element_extras import EXTRA_PROPERTIES, NATURAL_ISOTOPES
 from .elements import ATOMIC_WEIGHTS
+from .xray_data import MAX_XRAY_Z, XRAY_EDGES, XRAY_LINES
 
 __all__ = [
     "CATEGORIES",
+    "EXTRA_FIELDS",
+    "LINE_ORDER",
+    "PLANCK_C_EV_ANGSTROM",
     "all_elements",
     "element_by_symbol",
+    "lines_near",
     "periodic_table",
+    "xray_edges",
+    "xray_lines",
 ]
 
 #: Symbol and name in atomic-number order, so the index is ``Z - 1``.
@@ -496,12 +505,267 @@ def _state_at_stp(melting: float | None, boiling: float | None) -> str | None:
     return "solid" if melting > _AMBIENT_K else "liquid"
 
 
+#: Planck's constant times the speed of light, in eV angstrom.
+#:
+#: The one constant needed to turn every energy in the X-ray tables into the
+#: wavelength half the field quotes instead. Crystallographers ask for Cu Ka1 in
+#: angstroms and spectroscopists ask for it in keV; they are the same line, and
+#: converting here means the two answers can never drift apart.
+PLANCK_C_EV_ANGSTROM = 12398.419843320026
+
+#: Siegbahn line names in the order a spectrum is read: hardest series first,
+#: and within a series the strongest line first. Dictionary order in the
+#: generated table is alphabetical, which puts Ka3 before Kb1 and Lb before La,
+#: so the display order is stated once here rather than sorted at each caller.
+LINE_ORDER: tuple[str, ...] = (
+    "Ka1", "Ka2", "Ka3",
+    "Kb1", "Kb2", "Kb3", "Kb4", "Kb5",
+    "La1", "La2", "Lb1", "Lb2,15", "Lb3", "Lb4", "Lb5", "Lb6",
+    "Lg1", "Lg2", "Lg3", "Lg6", "Ll", "Ln",
+    "Ma", "Mb", "Mg", "Mz",
+)
+
+#: Absorption edges from the innermost shell outwards, which is also the order
+#: of decreasing energy.
+EDGE_ORDER: tuple[str, ...] = (
+    "K",
+    "L1", "L2", "L3",
+    "M1", "M2", "M3", "M4", "M5",
+    "N1", "N2", "N3", "N4", "N5", "N6", "N7",
+    "O1", "O2", "O3", "O4", "O5",
+    "P1", "P2", "P3",
+)
+
+#: Siegbahn names written the way they are printed, with the Greek letter.
+_GREEK = {
+    "a": "\N{GREEK SMALL LETTER ALPHA}",
+    "b": "\N{GREEK SMALL LETTER BETA}",
+    "g": "\N{GREEK SMALL LETTER GAMMA}",
+    "l": "\N{SCRIPT SMALL L}",
+    "n": "\N{GREEK SMALL LETTER ETA}",
+    "z": "\N{GREEK SMALL LETTER ZETA}",
+}
+
+
+def _siegbahn_label(name: str) -> str:
+    """Rewrite ``Ka1`` as the notation an X-ray table actually prints."""
+
+    letter = _GREEK.get(name[1], name[1])
+    return f"{name[0]}{letter}{name[2:]}"
+
+
+def _wavelength(energy_ev: float | None) -> float | None:
+    """Photon wavelength in angstroms, or ``None`` for an energy that is absent."""
+
+    if not energy_ev:
+        return None
+    return round(PLANCK_C_EV_ANGSTROM / energy_ev, 5)
+
+
+def xray_edges(number: int) -> dict[str, dict[str, Any]]:
+    """Absorption edges for one element, innermost shell first.
+
+    An empty result is a statement rather than a gap: the Elam tables stop at
+    californium, so every element above it has no measured X-ray spectrum at
+    all, not a spectrum this package failed to include.
+    """
+
+    raw = XRAY_EDGES.get(number, {})
+    return {
+        level: {
+            "energy_ev": raw[level][0],
+            "energy_kev": round(raw[level][0] / 1000.0, 5),
+            "wavelength_angstrom": _wavelength(raw[level][0]),
+            "fluorescence_yield": raw[level][1],
+            "jump_ratio": raw[level][2],
+        }
+        for level in EDGE_ORDER
+        if level in raw
+    }
+
+
+def xray_lines(number: int) -> dict[str, dict[str, Any]]:
+    """Characteristic emission lines for one element, hardest series first.
+
+    The relative intensity is normalised within each line's own series, which is
+    what makes "Ka1 is about twice Ka2" a meaningful statement and "Ka1 against
+    La1" a meaningless one. Each line carries the series it belongs to so a
+    caller cannot cross that boundary without noticing.
+    """
+
+    raw = XRAY_LINES.get(number, {})
+    return {
+        name: {
+            "label": _siegbahn_label(name),
+            "series": name[0],
+            "energy_ev": raw[name][0],
+            "energy_kev": round(raw[name][0] / 1000.0, 5),
+            "wavelength_angstrom": _wavelength(raw[name][0]),
+            "relative_intensity": raw[name][1],
+            "transition": f"{raw[name][2]} \N{RIGHTWARDS ARROW} {raw[name][3]}",
+        }
+        for name in LINE_ORDER
+        if name in raw
+    }
+
+
+#: The handful of X-ray values a table cell or a filter needs as a plain number.
+#:
+#: The full line and edge dictionaries are the reference; these are the ones an
+#: analyst reaches for often enough that burying them one level deeper would
+#: make the tool slower to use than the wall chart it replaces.
+_NOTABLE_LINES = (
+    ("k_alpha1_ev", "Ka1"),
+    ("k_alpha2_ev", "Ka2"),
+    ("k_beta1_ev", "Kb1"),
+    ("l_alpha1_ev", "La1"),
+)
+
+
+def _xray_summary(number: int) -> dict[str, Any]:
+    lines = XRAY_LINES.get(number, {})
+    edges = XRAY_EDGES.get(number, {})
+    summary: dict[str, Any] = {
+        field: (lines[name][0] if name in lines else None)
+        for field, name in _NOTABLE_LINES
+    }
+    summary["k_edge_ev"] = edges["K"][0] if "K" in edges else None
+    summary["l3_edge_ev"] = edges["L3"][0] if "L3" in edges else None
+    return summary
+
+
+def lines_near(
+    energy_ev: float, tolerance_ev: float = 50.0, min_intensity: float = 0.01
+) -> list[dict[str, Any]]:
+    """Every characteristic line within ``tolerance_ev`` of a measured energy.
+
+    This is the question an unlabelled peak in an EDS or XRF spectrum actually
+    poses - not "what is iron's Ka1" but "what could this 6.4 keV peak be" - and
+    it is the one a printed table answers worst, because answering it means
+    scanning every row. Weak lines are excluded by default: a visible peak is
+    not going to be a line carrying a thousandth of its series, and listing
+    those buries the two or three candidates that matter.
+    """
+
+    if tolerance_ev < 0:
+        raise ValueError("tolerance must not be negative")
+    matches: list[dict[str, Any]] = []
+    for number, raw in XRAY_LINES.items():
+        for name, (line_energy, intensity, initial, final) in raw.items():
+            if intensity < min_intensity:
+                continue
+            difference = line_energy - energy_ev
+            if abs(difference) > tolerance_ev:
+                continue
+            symbol, element_name = _NAMES[number - 1]
+            matches.append(
+                {
+                    "atomic_number": number,
+                    "symbol": symbol,
+                    "name": element_name,
+                    "line": name,
+                    "label": _siegbahn_label(name),
+                    "series": name[0],
+                    "energy_ev": line_energy,
+                    "energy_kev": round(line_energy / 1000.0, 5),
+                    "wavelength_angstrom": _wavelength(line_energy),
+                    "relative_intensity": intensity,
+                    "transition": f"{initial} \N{RIGHTWARDS ARROW} {final}",
+                    "difference_ev": round(difference, 2),
+                }
+            )
+    matches.sort(
+        key=lambda match: (abs(match["difference_ev"]), -match["relative_intensity"])
+    )
+    return matches
+
+
+def _isotopes(number: int) -> list[dict[str, Any]]:
+    """Naturally occurring isotopes, as mass number, abundance and atomic mass.
+
+    An empty list means the element has no primordial supply - it is synthetic,
+    or every isotope of it decays faster than the Earth is old. That is the same
+    fact ``synthetic`` reports, arrived at from the other direction.
+    """
+
+    return [
+        {
+            "mass_number": mass_number,
+            "abundance_percent": abundance,
+            "atomic_mass": mass,
+        }
+        for mass_number, abundance, mass in NATURAL_ISOTOPES.get(number, ())
+    ]
+
+
+#: Fields that come from the generated ``element_extras`` table.
+#:
+#: Listing them here rather than reading the keys of one element's dictionary
+#: matters because those dictionaries omit whatever is unknown, so hydrogen and
+#: iron do not have the same keys - and a client that discovered the field list
+#: from whichever element it happened to load first would silently never show
+#: the properties that element lacks.
+EXTRA_FIELDS: tuple[str, ...] = (
+    "electron_affinity_ev",
+    "ionization_energies_ev",
+    "electronegativity_allen_ev",
+    "covalent_radius_pm",
+    "van_der_waals_radius_pm",
+    "metallic_radius_pm",
+    "atomic_volume_cm3_per_mol",
+    "dipole_polarizability_au",
+    "lattice_structure",
+    "lattice_constant_angstrom",
+    "thermal_conductivity_w_per_m_k",
+    "molar_heat_capacity_j_per_mol_k",
+    "specific_heat_j_per_g_k",
+    "heat_of_fusion_kj_per_mol",
+    "heat_of_vaporization_kj_per_mol",
+    "heat_of_atomization_kj_per_mol",
+    "abundance_seawater_mg_per_l",
+    "goldschmidt_class",
+    "geochemical_class",
+    "price_usd_per_kg",
+    "supply_risk_index",
+    "cas_number",
+    "cpk_colour",
+    "mendeleev_number",
+    "pettifor_number",
+    "discoverers",
+    "discovery_location",
+    "name_origin",
+    "description",
+    "uses",
+    "sources",
+)
+
+#: X-ray fields that are plain numbers on the record, so a client can shade,
+#: sort or filter the grid by them without unpacking the nested tables.
+XRAY_SUMMARY_FIELDS: tuple[str, ...] = (
+    "k_alpha1_ev",
+    "k_alpha2_ev",
+    "k_beta1_ev",
+    "l_alpha1_ev",
+    "k_edge_ev",
+    "l3_edge_ev",
+)
+
+
+@lru_cache(maxsize=None)
 def _record(number: int) -> dict[str, Any]:
-    """Everything known about one element, derived where derivable."""
+    """Everything known about one element, derived where derivable.
+
+    Cached because the record is now assembled from four tables and is read once
+    per element per request; the result is treated as immutable by every caller
+    here, and :func:`all_elements` hands out copies so a caller that does mutate
+    one cannot poison the cache for the next request.
+    """
 
     symbol, name = _NAMES[number - 1]
     configuration, is_exception = _configuration(number)
     values = dict(zip(_FIELDS, _PROPERTIES[number]))
+    extras = {field: EXTRA_PROPERTIES.get(number, {}).get(field) for field in EXTRA_FIELDS}
+    isotopes = _isotopes(number)
     return {
         "atomic_number": number,
         "symbol": symbol,
@@ -521,6 +785,14 @@ def _record(number: int) -> dict[str, Any]:
         "radioactive": number in _NO_STABLE_ISOTOPE,
         "known_since_antiquity": number in _KNOWN_SINCE_ANTIQUITY,
         "synthetic": number in _SYNTHETIC,
+        "natural_isotopes": isotopes,
+        "natural_isotope_count": len(isotopes),
+        "monoisotopic": len(isotopes) == 1,
+        "xray_edges": xray_edges(number),
+        "xray_lines": xray_lines(number),
+        "has_xray_data": number in XRAY_LINES,
+        **_xray_summary(number),
+        **extras,
         **values,
     }
 
@@ -539,10 +811,42 @@ def _shell_electrons(number: int) -> list[int]:
     return [shells[shell] for shell in sorted(shells)]
 
 
-def all_elements() -> list[dict[str, Any]]:
-    """Every element, in atomic-number order."""
+#: Fields left out of the whole-table payload and served per element instead.
+#:
+#: The full line and edge tables are most of the data in this package - 96
+#: elements times twenty-six lines and twenty-four edges - and the prose fields
+#: add most of the rest. Sending all of it with the grid would be roughly
+#: 800 kB before the reader has clicked anything, to draw a table that needs
+#: none of it. Everything the grid itself uses - every scalar property, the
+#: summary X-ray energies, the isotope list - stays in the one payload, so
+#: shading, filtering and search still never touch the network; only opening an
+#: element costs a request, and that request is a few kilobytes.
+_DETAIL_ONLY_FIELDS: tuple[str, ...] = (
+    "xray_lines",
+    "xray_edges",
+    "description",
+    "uses",
+    "sources",
+    "name_origin",
+    "discoverers",
+    "discovery_location",
+)
 
-    return [_record(number) for number in range(1, len(_NAMES) + 1)]
+
+def all_elements(*, detail: bool = True) -> list[dict[str, Any]]:
+    """Every element, in atomic-number order, as records the caller owns.
+
+    With ``detail=False`` the per-element X-ray tables and prose are omitted;
+    see :data:`_DETAIL_ONLY_FIELDS` for why the whole-table payload does that.
+    """
+
+    records = [dict(_record(number)) for number in range(1, len(_NAMES) + 1)]
+    if detail:
+        return records
+    for record in records:
+        for field in _DETAIL_ONLY_FIELDS:
+            record.pop(field, None)
+    return records
 
 
 def element_by_symbol(symbol: str) -> dict[str, Any] | None:
@@ -551,7 +855,7 @@ def element_by_symbol(symbol: str) -> dict[str, Any] | None:
     wanted = str(symbol).strip().lower()
     for number, (element_symbol, _name) in enumerate(_NAMES, start=1):
         if element_symbol.lower() == wanted:
-            return _record(number)
+            return dict(_record(number))
     return None
 
 
@@ -564,7 +868,7 @@ def periodic_table() -> dict[str, Any]:
     one per client.
     """
 
-    elements = all_elements()
+    elements = all_elements(detail=False)
     for record in elements:
         number = record["atomic_number"]
         if 57 <= number <= 71:
@@ -578,5 +882,11 @@ def periodic_table() -> dict[str, Any]:
         "elements": elements,
         "categories": list(CATEGORIES),
         "fields": list(_FIELDS),
+        "extra_fields": list(EXTRA_FIELDS),
+        "xray_summary_fields": list(XRAY_SUMMARY_FIELDS),
+        "line_order": list(LINE_ORDER),
+        "edge_order": list(EDGE_ORDER),
+        "max_xray_z": MAX_XRAY_Z,
+        "detail_only_fields": list(_DETAIL_ONLY_FIELDS),
         "count": len(elements),
     }

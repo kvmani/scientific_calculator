@@ -359,6 +359,158 @@
         letter-spacing: 0.14em;
         color: var(--accent);
       }
+      /* The detail view is now long enough that one flat list of forty rows
+         would be unreadable, so properties are grouped and every group but the
+         first two collapses. The groups a reader opens are remembered for the
+         next element, because someone comparing X-ray lines across elements
+         should not have to reopen the same section for each one. */
+      .pdetail details {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin-top: 10px;
+        background: #fff;
+      }
+      .pdetail details > summary {
+        cursor: pointer;
+        padding: 9px 12px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+        list-style: none;
+      }
+      .pdetail details > summary::-webkit-details-marker {
+        display: none;
+      }
+      /* Two glyphs rather than one rotated glyph: rotating a small triangle
+         renders it as a smear at this size in several browsers, and the
+         character set already contains the shape pointing the other way. */
+      .pdetail details > summary::before {
+        content: "b8";
+        display: inline-block;
+        width: 14px;
+      }
+      .pdetail details[open] > summary::before {
+        content: "be";
+      }
+      .pdetail details > div {
+        padding: 0 12px 10px;
+      }
+      .pdetail details table.pprops {
+        margin-top: 0;
+      }
+      .pdetail summary .count {
+        font-weight: 500;
+        letter-spacing: 0;
+        color: var(--muted);
+        text-transform: none;
+      }
+      table.pdata {
+        border-collapse: collapse;
+        width: 100%;
+        font: 12px ui-monospace, monospace;
+      }
+      table.pdata th,
+      table.pdata td {
+        border-bottom: 1px solid var(--line);
+        padding: 5px 8px;
+        text-align: right;
+        white-space: nowrap;
+      }
+      table.pdata th:first-child,
+      table.pdata td:first-child,
+      table.pdata th.text,
+      table.pdata td.text {
+        text-align: left;
+      }
+      table.pdata thead th {
+        font: 600 11px/1.3 inherit;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      /* A bar in the cell rather than a separate chart: relative intensity is
+         only ever read as "which of these lines is the big one", and a number
+         like 0.580277 answers that more slowly than a bar does. */
+      .ibar {
+        display: inline-block;
+        height: 8px;
+        min-width: 1px;
+        border-radius: 2px;
+        background: var(--accent);
+        vertical-align: middle;
+      }
+      .pscale {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .pscale .ramp {
+        flex: 0 0 150px;
+        height: 10px;
+        border-radius: 3px;
+        border: 1px solid #00000022;
+        background: linear-gradient(90deg, hsl(205 62% 94%), hsl(205 62% 48%));
+      }
+      .pdetail-prose {
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0 0 8px;
+      }
+      .xray-finder {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px 16px 16px;
+        background: #fff;
+      }
+      .xray-finder h3 {
+        margin: 0 0 2px;
+        font: 700 1.05rem/1.2 Georgia, serif;
+      }
+      .xray-finder .hint {
+        display: block;
+        margin-bottom: 10px;
+      }
+      .xray-finder .grid {
+        align-items: end;
+      }
+      #xray-finder-result {
+        margin-top: 12px;
+        max-height: 320px;
+        overflow: auto;
+      }
+      /* Provenance is part of the tool, not a footnote to it: a reference table
+         nobody can check is one nobody should trust, and "the CRC Handbook" is
+         the name of a book rather than something a reader can follow. Every
+         group of properties names its compilation, the paper behind it where
+         there is one, and a URL that lands on the numbers. */
+      .psource-block {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px 16px 16px;
+        background: #fbfcfa;
+      }
+      ul.psources {
+        margin: 8px 0 0;
+        padding-left: 18px;
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+      ul.psources li {
+        margin-bottom: 8px;
+      }
+      ul.psources strong {
+        color: var(--ink);
+      }
+      ul.psources a,
+      .pdetail a {
+        color: var(--accent);
+        word-break: break-word;
+      }
       table.composition-table {
         width: 100%;
         border-collapse: collapse;
@@ -398,8 +550,9 @@
       <p class="lede">
         Evaluate expressions with named variables, plot one-variable curves or
         two-variable mesh surfaces, convert between atom and mass fractions, and
-        look up any element in the periodic table — all computed locally, with no
-        outside connection.
+        look up any element in the periodic table, including its characteristic
+        X-ray lines and absorption edges — all computed locally, with no outside
+        connection, and every number linked to the database it came from.
       </p>
       <div class="tabs">
         <button class="tab active" data-panel="evaluate-panel">Evaluate</button
@@ -567,12 +720,48 @@
           <div class="field">
             <label for="ptable-colour">Shade cells by</label
             ><select id="ptable-colour">
-              <option value="category">Category</option>
-              <option value="state_at_room_temperature">State at room temperature</option>
-              <option value="block">Block (s, p, d, f)</option>
-              <option value="electronegativity_pauling">Electronegativity</option>
-              <option value="melting_point_k">Melting point</option>
-              <option value="density_g_per_cm3">Density</option>
+              <optgroup label="Classification">
+                <option value="category">Category</option>
+                <option value="block">Block (s, p, d, f)</option>
+                <option value="state_at_room_temperature">State at room temperature</option>
+                <option value="cpk_colour">CPK / Jmol colour</option>
+              </optgroup>
+              <optgroup label="X-ray">
+                <option value="k_alpha1_ev">K&#945;1 emission energy</option>
+                <option value="k_beta1_ev">K&#946;1 emission energy</option>
+                <option value="l_alpha1_ev">L&#945;1 emission energy</option>
+                <option value="k_edge_ev">K absorption edge</option>
+                <option value="l3_edge_ev">L3 absorption edge</option>
+              </optgroup>
+              <optgroup label="Electronic">
+                <option value="electronegativity_pauling">Electronegativity (Pauling)</option>
+                <option value="electronegativity_allen_ev">Electronegativity (Allen)</option>
+                <option value="first_ionization_kj_per_mol">First ionization energy</option>
+                <option value="electron_affinity_ev">Electron affinity</option>
+                <option value="dipole_polarizability_au">Dipole polarizability</option>
+              </optgroup>
+              <optgroup label="Size">
+                <option value="atomic_radius_pm">Atomic radius</option>
+                <option value="covalent_radius_pm">Covalent radius</option>
+                <option value="van_der_waals_radius_pm">Van der Waals radius</option>
+                <option value="atomic_volume_cm3_per_mol">Atomic volume</option>
+                <option value="atomic_mass">Atomic mass</option>
+              </optgroup>
+              <optgroup label="Physical and thermal">
+                <option value="melting_point_k">Melting point</option>
+                <option value="boiling_point_k">Boiling point</option>
+                <option value="density_g_per_cm3">Density</option>
+                <option value="thermal_conductivity_w_per_m_k">Thermal conductivity</option>
+                <option value="molar_heat_capacity_j_per_mol_k">Molar heat capacity</option>
+                <option value="heat_of_fusion_kj_per_mol">Heat of fusion</option>
+                <option value="heat_of_vaporization_kj_per_mol">Heat of vaporization</option>
+              </optgroup>
+              <optgroup label="Occurrence">
+                <option value="crustal_abundance_mg_per_kg">Abundance in Earth's crust</option>
+                <option value="abundance_seawater_mg_per_l">Abundance in seawater</option>
+                <option value="price_usd_per_kg">Price per kilogram</option>
+                <option value="natural_isotope_count">Natural isotopes</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -585,6 +774,40 @@
         </div>
         <div class="plegend" id="ptable-legend"></div>
         <div class="pdetail" id="ptable-detail">Loading the table…</div>
+        <div class="xray-finder">
+          <h3>Identify a line from its energy</h3>
+          <span class="hint"
+            >The question a spectrum actually asks. Give the energy of an
+            unlabelled peak and every characteristic line within the tolerance is
+            listed, nearest first.</span
+          >
+          <div class="grid">
+            <div class="field">
+              <label for="xray-energy">Peak energy (keV)</label
+              ><input id="xray-energy" type="number" step="any" min="0" value="6.4" />
+            </div>
+            <div class="field">
+              <label for="xray-tolerance">Tolerance (eV)</label
+              ><input id="xray-tolerance" type="number" step="any" min="0" value="40" />
+            </div>
+            <div class="field">
+              <label for="xray-min-intensity">Weakest line to list</label
+              ><select id="xray-min-intensity">
+                <option value="0.05">Strong lines only (5% of series)</option>
+                <option value="0.01" selected>Usual lines (1% of series)</option>
+                <option value="0.0001">Everything tabulated</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="button" id="xray-identify">Identify →</button>
+          </div>
+          <div id="xray-finder-result"></div>
+        </div>
+        <div class="psource-block">
+          <p class="pgroup-title" style="margin-top: 0">WHERE THESE NUMBERS COME FROM</p>
+          <div id="ptable-sources">Loading the source list…</div>
+        </div>
       </section>
     </main>
     <script>
@@ -835,45 +1058,104 @@
          blank cell, because a blank reads as an oversight and these absences
          are the honest answer: most of period 7 has never been measured. */
       const unmeasured = '<span class="unmeasured">not measured</span>';
-      const show = (value, unit, digits) => {
-        if (value === null || value === undefined || value === "") return unmeasured;
-        const text =
-          typeof value === "number" && digits !== undefined ? value.toFixed(digits) : value;
-        return unit ? text + " " + unit : String(text);
+
+      /* Properties whose values span so many decades that a linear ramp shows
+         one dark cell and 117 identical pale ones. Oxygen is four hundred
+         million times as abundant in the crust as rhodium; on a linear scale
+         that is not a comparison, it is a single outlier. */
+      const logScaled = {
+        crustal_abundance_mg_per_kg: true,
+        abundance_seawater_mg_per_l: true,
+        price_usd_per_kg: true,
+        thermal_conductivity_w_per_m_k: true,
       };
+
+      const categoricalPalette = {
+        s: "#ffd9c2",
+        p: "#d6f0c9",
+        d: "#d8e6f5",
+        f: "#cfe9f2",
+        solid: "#d8e6f5",
+        liquid: "#cfe6df",
+        gas: "#ffeab8",
+      };
+
+      /* The range a continuous shading is drawn against is a property of the
+         whole table, not of one cell, so it is computed once per render. Working
+         it out inside shadeFor meant scanning all 118 elements for every one of
+         them - 14000 comparisons to draw one table, repeated on every keystroke
+         in the search box. */
+      function shadeContext(mode) {
+        if (mode === "category") return { kind: "category" };
+        if (mode === "cpk_colour") return { kind: "cpk" };
+        if (mode === "block" || mode === "state_at_room_temperature") {
+          return { kind: "palette" };
+        }
+        const log = Boolean(logScaled[mode]);
+        const values = ptableElements
+          .map((item) => item[mode])
+          .filter((value) => typeof value === "number" && (!log || value > 0));
+        if (!values.length) return { kind: "numeric", low: 0, high: 0, log: log };
+        return {
+          kind: "numeric",
+          low: Math.min.apply(null, values),
+          high: Math.max.apply(null, values),
+          log: log,
+        };
+      }
+
+      /* Whether text on a given background should be dark or light. Only the
+         CPK shading needs it: those colours are the ones chemists expect for
+         each element, not ones chosen to be written on, and carbon's grey and
+         sulfur's yellow do not both take black lettering. */
+      function readableInk(hex) {
+        const value = String(hex || "").replace("#", "");
+        if (value.length !== 6) return "inherit";
+        const parts = [0, 2, 4].map((at) => parseInt(value.substr(at, 2), 16) / 255);
+        const linear = parts.map((c) =>
+          c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4),
+        );
+        const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+        return luminance > 0.45 ? "#111" : "#fff";
+      }
 
       /* Shading by a continuous property uses a single-hue ramp over the range
          actually present, so the colour means "high or low within this table"
          rather than an absolute the reader has no scale for. An element with no
          measured value stays grey instead of being placed at one end of the
          ramp, which would assert a measurement that does not exist. */
-      function shadeFor(element, mode) {
-        if (mode === "category") return { cls: "cat-" + slug(element.category), style: "" };
-        if (mode === "block" || mode === "state_at_room_temperature") {
-          const palette = {
-            s: "#ffd9c2",
-            p: "#d6f0c9",
-            d: "#d8e6f5",
-            f: "#cfe9f2",
-            solid: "#d8e6f5",
-            liquid: "#cfe6df",
-            gas: "#ffeab8",
-          };
-          return { cls: "", style: "background:" + (palette[element[mode]] || "#e6e6e6") };
+      function shadeFor(element, mode, context) {
+        if (context.kind === "category") {
+          return { cls: "cat-" + slug(element.category), style: "" };
         }
-        const values = ptableElements
-          .map((item) => item[mode])
-          .filter((value) => typeof value === "number");
-        const low = Math.min.apply(null, values);
-        const high = Math.max.apply(null, values);
+        if (context.kind === "cpk") {
+          const colour = element.cpk_colour;
+          if (!colour) return { cls: "", style: "background:#e6e6e6" };
+          return {
+            cls: "",
+            style: "background:" + colour + ";color:" + readableInk(colour),
+          };
+        }
+        if (context.kind === "palette") {
+          return {
+            cls: "",
+            style: "background:" + (categoricalPalette[element[mode]] || "#e6e6e6"),
+          };
+        }
         const value = element[mode];
-        if (typeof value !== "number") return { cls: "", style: "background:#e6e6e6" };
-        const fraction = high === low ? 0.5 : (value - low) / (high - low);
+        const usable =
+          typeof value === "number" && (!context.log || value > 0) && context.high > 0;
+        if (!usable) return { cls: "", style: "background:#e6e6e6" };
+        const scale = context.log ? Math.log10 : (x) => x;
+        const low = scale(context.low);
+        const high = scale(context.high);
+        const fraction = high === low ? 0.5 : (scale(value) - low) / (high - low);
         return { cls: "", style: "background:hsl(205 62% " + (94 - 46 * fraction) + "%)" };
       }
 
       function renderPeriodicTable() {
         const mode = $("ptable-colour").value;
+        const context = shadeContext(mode);
         const main = $("ptable-main");
         const fBlock = $("ptable-f");
         main.innerHTML = "";
@@ -882,7 +1164,7 @@
           const cell = document.createElement("button");
           cell.type = "button";
           cell.className = "pcell";
-          const shade = shadeFor(element, mode);
+          const shade = shadeFor(element, mode, context);
           if (shade.cls) cell.classList.add(shade.cls);
           if (shade.style) cell.setAttribute("style", shade.style);
           cell.style.gridColumn = element.grid_column;
@@ -916,6 +1198,11 @@
         const legend = $("ptable-legend");
         const mode = $("ptable-colour").value;
         legend.innerHTML = "";
+        if (mode === "cpk_colour") {
+          legend.textContent =
+            "The CPK / Jmol colours, as molecular graphics draws each element.";
+          return;
+        }
         if (mode === "block" || mode === "state_at_room_temperature") {
           // A categorical shading has no high and low, so saying "darker is
           // higher" here would describe a scale that is not being drawn.
@@ -924,8 +1211,24 @@
           return;
         }
         if (mode !== "category") {
-          legend.textContent =
-            "Darker is higher. Grey means no measured value for this property.";
+          /* The ends of the ramp are labelled with the values they stand for.
+             "Darker is higher" told the reader the direction but not the size,
+             which for a scale spanning nine decades is most of the question. */
+          const context = shadeContext(mode);
+          const unit = fieldUnits[mode] || "";
+          const scale = document.createElement("div");
+          scale.className = "pscale";
+          scale.innerHTML =
+            "<span>" +
+            formatNumber(context.low) +
+            (unit ? " " + unit : "") +
+            '</span><span class="ramp"></span><span>' +
+            formatNumber(context.high) +
+            (unit ? " " + unit : "") +
+            "</span><span>" +
+            (context.log ? "logarithmic scale. " : "") +
+            "Grey: no measured value.</span>";
+          legend.append(scale);
           return;
         }
         const seen = [];
@@ -947,18 +1250,241 @@
         });
       }
 
-      function selectElement(symbol) {
-        const element = ptableElements.find((item) => item.symbol === symbol);
-        if (!element) return;
-        ptableSelected = symbol;
+      /* Units for the shading legend and the property tables, in one place so
+         a value and its unit cannot drift apart across the three places each
+         property is shown. */
+      const fieldUnits = {
+        atomic_mass: "u",
+        melting_point_k: "K",
+        boiling_point_k: "K",
+        density_g_per_cm3: "g/cm\u00b3",
+        atomic_radius_pm: "pm",
+        covalent_radius_pm: "pm",
+        van_der_waals_radius_pm: "pm",
+        metallic_radius_pm: "pm",
+        atomic_volume_cm3_per_mol: "cm\u00b3/mol",
+        electron_affinity_ev: "eV",
+        electronegativity_allen_ev: "eV",
+        first_ionization_kj_per_mol: "kJ/mol",
+        thermal_conductivity_w_per_m_k: "W/(m\u00b7K)",
+        molar_heat_capacity_j_per_mol_k: "J/(mol\u00b7K)",
+        specific_heat_j_per_g_k: "J/(g\u00b7K)",
+        heat_of_fusion_kj_per_mol: "kJ/mol",
+        heat_of_vaporization_kj_per_mol: "kJ/mol",
+        heat_of_atomization_kj_per_mol: "kJ/mol",
+        crustal_abundance_mg_per_kg: "mg/kg",
+        abundance_seawater_mg_per_l: "mg/L",
+        price_usd_per_kg: "USD/kg",
+        dipole_polarizability_au: "a.u.",
+        lattice_constant_angstrom: "\u00c5",
+        k_alpha1_ev: "eV",
+        k_beta1_ev: "eV",
+        l_alpha1_ev: "eV",
+        k_edge_ev: "eV",
+        l3_edge_ev: "eV",
+      };
+
+      /* Numbers that span nine decades cannot all be written the same way:
+         461000 and 0.0000002 are both crustal abundances. Exponential notation
+         below a millionth keeps the small ones from rendering as "0". */
+      function formatNumber(value) {
+        if (typeof value !== "number" || !isFinite(value)) return String(value);
+        const magnitude = Math.abs(value);
+        if (magnitude !== 0 && (magnitude < 1e-4 || magnitude >= 1e7)) {
+          return value.toExponential(3);
+        }
+        return String(Math.round(value * 1e6) / 1e6);
+      }
+
+      const showValue = (value, unit, digits) => {
+        if (value === null || value === undefined || value === "") return unmeasured;
+        let text;
+        if (typeof value === "number") {
+          text = digits === undefined ? formatNumber(value) : value.toFixed(digits);
+        } else {
+          text = String(value);
+        }
+        return unit ? text + " " + unit : text;
+      };
+
+      const escapeHtml = (value) =>
+        String(value).replace(
+          /[&<>"]/g,
+          (character) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character],
+        );
+
+      /* Which sections the reader has open, kept across elements. Someone
+         comparing K-edges down a group opens that section once, not once per
+         element; forgetting the state would make the tool actively worse for
+         the use it was extended for. */
+      const openSections = { core: true, electronic: true };
+
+      function sectionHtml(id, title, body, count) {
+        if (!body) return "";
+        const label = count === undefined ? "" : ' <span class="count">' + count + "</span>";
+        return (
+          "<details data-section=\"" +
+          id +
+          '"' +
+          (openSections[id] ? " open" : "") +
+          "><summary>" +
+          title +
+          label +
+          "</summary><div>" +
+          body +
+          "</div></details>"
+        );
+      }
+
+      const propertyTable = (rows) => {
+        const usable = rows.filter((row) => row);
+        if (!usable.length) return "";
+        return (
+          '<table class="pprops"><tbody>' +
+          usable
+            .map((row) => "<tr><th>" + row[0] + "</th><td>" + row[1] + "</td></tr>")
+            .join("") +
+          "</tbody></table>"
+        );
+      };
+
+      /* A citation under each group rather than one list at the bottom: the
+         reader who wants to check a K-edge is looking at the K-edge, and a
+         source they have to go and find is a source they will not check. */
+      let sourceIndex = {};
+      function citation(id) {
+        const entry = sourceIndex[id];
+        if (!entry) return "";
+        const links = [
+          '<a href="' + entry.url + '" target="_blank" rel="noopener">' + escapeHtml(entry.publisher) + "</a>",
+        ];
+        if (entry.doi) {
+          links.push('<a href="' + entry.doi + '" target="_blank" rel="noopener">DOI</a>');
+        }
+        if (entry.cross_check_url) {
+          links.push(
+            '<a href="' +
+              entry.cross_check_url +
+              '" target="_blank" rel="noopener">' +
+              escapeHtml(entry.cross_check_label || "cross-check") +
+              "</a>",
+          );
+        }
+        return '<p class="hint" style="margin-top:6px">Source: ' + links.join(" \u00b7 ") + "</p>";
+      }
+
+      function xrayLineTable(lines) {
+        const names = Object.keys(lines || {});
+        if (!names.length) return "";
+        const strongest = Math.max.apply(
+          null,
+          names.map((name) => lines[name].relative_intensity),
+        );
+        return (
+          '<table class="pdata"><thead><tr><th>Line</th><th class="text">Transition</th>' +
+          "<th>Energy (keV)</th><th>&#955; (&#197;)</th><th>Energy (eV)</th>" +
+          '<th class="text">Relative intensity</th></tr></thead><tbody>' +
+          names
+            .map((name) => {
+              const line = lines[name];
+              const width = Math.max(1, Math.round((line.relative_intensity / strongest) * 70));
+              return (
+                "<tr><td><strong>" +
+                escapeHtml(line.label) +
+                '</strong></td><td class="text">' +
+                escapeHtml(line.transition) +
+                "</td><td>" +
+                line.energy_kev.toFixed(4) +
+                "</td><td>" +
+                line.wavelength_angstrom.toFixed(4) +
+                "</td><td>" +
+                line.energy_ev.toFixed(1) +
+                '</td><td class="text"><span class="ibar" style="width:' +
+                width +
+                'px"></span> ' +
+                line.relative_intensity.toFixed(3) +
+                "</td></tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>"
+        );
+      }
+
+      function xrayEdgeTable(edges) {
+        const levels = Object.keys(edges || {});
+        if (!levels.length) return "";
+        return (
+          '<table class="pdata"><thead><tr><th class="text">Edge</th>' +
+          "<th>Energy (keV)</th><th>&#955; (&#197;)</th><th>Energy (eV)</th>" +
+          "<th>Fluorescence yield</th><th>Jump ratio</th></tr></thead><tbody>" +
+          levels
+            .map((level) => {
+              const edge = edges[level];
+              return (
+                '<tr><td class="text"><strong>' +
+                level +
+                "</strong></td><td>" +
+                edge.energy_kev.toFixed(4) +
+                "</td><td>" +
+                edge.wavelength_angstrom.toFixed(4) +
+                "</td><td>" +
+                edge.energy_ev.toFixed(1) +
+                "</td><td>" +
+                edge.fluorescence_yield.toFixed(5) +
+                "</td><td>" +
+                edge.jump_ratio.toFixed(3) +
+                "</td></tr>"
+              );
+            })
+            .join("") +
+          "</tbody></table>"
+        );
+      }
+
+      function isotopeTable(isotopes) {
+        if (!isotopes || !isotopes.length) return "";
+        return (
+          '<table class="pdata"><thead><tr><th class="text">Isotope</th>' +
+          "<th>Abundance (%)</th><th>Atomic mass (u)</th></tr></thead><tbody>" +
+          isotopes
+            .map(
+              (isotope) =>
+                '<tr><td class="text"><strong><sup>' +
+                isotope.mass_number +
+                "</sup></strong></td><td>" +
+                isotope.abundance_percent.toFixed(4) +
+                "</td><td>" +
+                isotope.atomic_mass.toFixed(6) +
+                "</td></tr>",
+            )
+            .join("") +
+          "</tbody></table>"
+        );
+      }
+
+      const ionizationList = (energies) => {
+        if (!energies || !energies.length) return null;
+        return energies
+          .map((energy, index) => (index + 1) + ": " + energy.toFixed(2))
+          .join(" \u00b7 ") + " eV";
+      };
+
+      /* Full records are fetched one at a time and kept, because the whole-table
+         payload deliberately leaves out the X-ray tables and the prose. A second
+         click on the same element must not cost a second request. */
+      const detailCache = {};
+
+      function renderDetail(element) {
         const configuration =
-          show(element.electron_configuration) +
+          showValue(element.electron_configuration) +
           (element.electron_configuration_is_exception
-            ? ' <span class="unmeasured">— an exception to the Madelung ordering</span>'
+            ? ' <span class="unmeasured">\u2014 an exception to the Madelung ordering</span>'
             : "");
-        const rows = [
-          ["Atomic number", show(element.atomic_number)],
-          ["Standard atomic weight", show(element.atomic_mass, "u")],
+        const core = propertyTable([
+          ["Atomic number", showValue(element.atomic_number)],
+          ["Standard atomic weight", showValue(element.atomic_mass, "u")],
           [
             "Group / period / block",
             (element.group === null ? "f block" : element.group) +
@@ -967,38 +1493,170 @@
               " / " +
               element.block,
           ],
-          ["Category", show(element.category)],
+          ["Category", showValue(element.category)],
+          ["CAS registry number", showValue(element.cas_number)],
+          ["State at room temperature", showValue(element.state_at_room_temperature)],
+          ["Common oxidation states", showValue(element.common_oxidation_states)],
+          ["Radioactive", element.radioactive ? "yes \u2014 no stable isotope" : "no"],
+          [
+            "Natural isotopes",
+            element.natural_isotope_count
+              ? element.natural_isotope_count +
+                (element.monoisotopic ? " (monoisotopic)" : "")
+              : '<span class="unmeasured">none \u2014 no primordial supply</span>',
+          ],
+        ]);
+
+        const electronic = propertyTable([
           ["Electron configuration", configuration],
           ["Electrons per shell", element.shell_electrons.join(", ")],
           [
             "Valence electrons",
             element.valence_electrons === null
               ? '<span class="unmeasured">not one number outside the s and p blocks</span>'
-              : show(element.valence_electrons),
+              : showValue(element.valence_electrons),
           ],
-          ["Common oxidation states", show(element.common_oxidation_states)],
-          ["Electronegativity (Pauling)", show(element.electronegativity_pauling)],
-          ["First ionization energy", show(element.first_ionization_kj_per_mol, "kJ/mol", 1)],
-          ["Atomic radius", show(element.atomic_radius_pm, "pm")],
-          ["State at room temperature", show(element.state_at_room_temperature)],
-          ["Melting point", show(element.melting_point_k, "K", 2)],
-          ["Boiling point", show(element.boiling_point_k, "K", 2)],
-          ["Density", show(element.density_g_per_cm3, "g/cm³")],
-          ["Crystal structure", show(element.crystal_structure)],
-          ["Radioactive", element.radioactive ? "yes — no stable isotope" : "no"],
+          ["Electronegativity (Pauling)", showValue(element.electronegativity_pauling)],
+          [
+            "Electronegativity (Allen)",
+            showValue(element.electronegativity_allen_ev, "eV"),
+          ],
+          [
+            "First ionization energy",
+            showValue(element.first_ionization_kj_per_mol, "kJ/mol", 1),
+          ],
+          [
+            "Successive ionization energies",
+            ionizationList(element.ionization_energies_ev) || unmeasured,
+          ],
+          ["Electron affinity", showValue(element.electron_affinity_ev, "eV")],
+          [
+            "Dipole polarizability",
+            showValue(element.dipole_polarizability_au, "a.u."),
+          ],
+        ]);
+
+        const size = propertyTable([
+          ["Atomic radius", showValue(element.atomic_radius_pm, "pm")],
+          ["Covalent radius (Cordero)", showValue(element.covalent_radius_pm, "pm")],
+          [
+            "Van der Waals radius (Alvarez)",
+            showValue(element.van_der_waals_radius_pm, "pm"),
+          ],
+          ["Metallic radius", showValue(element.metallic_radius_pm, "pm")],
+          [
+            "Atomic volume",
+            showValue(element.atomic_volume_cm3_per_mol, "cm\u00b3/mol"),
+          ],
+        ]);
+
+        const physical = propertyTable([
+          ["Melting point", showValue(element.melting_point_k, "K", 2)],
+          ["Boiling point", showValue(element.boiling_point_k, "K", 2)],
+          ["Density", showValue(element.density_g_per_cm3, "g/cm\u00b3")],
+          ["Crystal structure", showValue(element.crystal_structure)],
+          [
+            "Lattice",
+            element.lattice_structure
+              ? escapeHtml(element.lattice_structure) +
+                (element.lattice_constant_angstrom
+                  ? ", a = " + element.lattice_constant_angstrom + " \u00c5"
+                  : "")
+              : unmeasured,
+          ],
+          [
+            "Thermal conductivity",
+            showValue(element.thermal_conductivity_w_per_m_k, "W/(m\u00b7K)"),
+          ],
+          [
+            "Molar heat capacity",
+            showValue(element.molar_heat_capacity_j_per_mol_k, "J/(mol\u00b7K)"),
+          ],
+          ["Specific heat", showValue(element.specific_heat_j_per_g_k, "J/(g\u00b7K)")],
+          ["Heat of fusion", showValue(element.heat_of_fusion_kj_per_mol, "kJ/mol")],
+          [
+            "Heat of vaporization",
+            showValue(element.heat_of_vaporization_kj_per_mol, "kJ/mol"),
+          ],
+          [
+            "Heat of atomization",
+            showValue(element.heat_of_atomization_kj_per_mol, "kJ/mol"),
+          ],
+        ]);
+
+        const occurrence = propertyTable([
           [
             "Abundance in Earth's crust",
             element.synthetic
-              ? "none — made, not found"
-              : show(element.crustal_abundance_mg_per_kg, "mg/kg"),
+              ? "none \u2014 made, not found"
+              : showValue(element.crustal_abundance_mg_per_kg, "mg/kg"),
+          ],
+          [
+            "Abundance in seawater",
+            showValue(element.abundance_seawater_mg_per_l, "mg/L"),
+          ],
+          ["Goldschmidt class", showValue(element.goldschmidt_class)],
+          ["Geochemical class", showValue(element.geochemical_class)],
+          ["Indicative price", showValue(element.price_usd_per_kg, "USD/kg")],
+          [
+            "Relative supply risk",
+            showValue(element.supply_risk_index) +
+              (element.supply_risk_index === null || element.supply_risk_index === undefined
+                ? ""
+                : " / 10"),
           ],
           [
             "Discovered",
             element.known_since_antiquity
               ? "known since antiquity"
-              : show(element.discovery_year),
+              : showValue(element.discovery_year),
           ],
-        ];
+          element.discoverers ? ["Discovered by", escapeHtml(element.discoverers)] : null,
+          element.discovery_location
+            ? ["Discovered in", escapeHtml(element.discovery_location)]
+            : null,
+          element.name_origin ? ["Name origin", escapeHtml(element.name_origin)] : null,
+        ]);
+
+        const prose = [
+          element.description
+            ? '<p class="pdetail-prose">' + escapeHtml(element.description) + "</p>"
+            : "",
+          element.uses
+            ? '<p class="pdetail-prose"><strong>Uses.</strong> ' +
+              escapeHtml(element.uses) +
+              "</p>"
+            : "",
+          element.sources
+            ? '<p class="pdetail-prose"><strong>Sources.</strong> ' +
+              escapeHtml(element.sources) +
+              "</p>"
+            : "",
+        ].join("");
+
+        const lines = element.xray_lines;
+        const edges = element.xray_edges;
+        const lineCount = lines ? Object.keys(lines).length : 0;
+        const edgeCount = edges ? Object.keys(edges).length : 0;
+        let xray;
+        if (!element.has_xray_data) {
+          xray =
+            '<p class="pdetail-prose unmeasured">No X-ray data. The Elam tables stop at ' +
+            "californium (Z = 98): heavier elements have never been produced in " +
+            "quantities that allow their X-ray spectrum to be measured.</p>";
+        } else if (lines === undefined) {
+          xray = '<p class="pdetail-prose">Loading\u2026</p>';
+        } else {
+          xray =
+            "<p class=\"hint\">Emission lines, strongest series first. Intensities are " +
+            "normalised within each series, so K&#945;1 against K&#945;2 is a real " +
+            "comparison and K&#945;1 against L&#945;1 is not.</p>" +
+            xrayLineTable(lines) +
+            '<p class="hint" style="margin-top:12px">Absorption edges, innermost shell first.</p>' +
+            xrayEdgeTable(edges) +
+            citation("xray");
+        }
+
         const tile = "cat-" + slug(element.category);
         $("ptable-detail").innerHTML =
           '<div class="pdetail-head"><div class="pdetail-tile ' +
@@ -1013,18 +1671,234 @@
           element.name +
           '</h2><p class="pdetail-sub">' +
           element.category +
-          " · " +
+          " \u00b7 " +
           element.block +
-          " block · period " +
+          " block \u00b7 period " +
           element.period +
-          (element.group === null ? "" : " · group " + element.group) +
-          '</p></div></div><table class="pprops"><tbody>' +
-          rows
-            .map((row) => "<tr><th>" + row[0] + "</th><td>" + row[1] + "</td></tr>")
-            .join("") +
-          "</tbody></table>";
-        renderPeriodicTable();
+          (element.group === null ? "" : " \u00b7 group " + element.group) +
+          (element.k_alpha1_ev
+            ? " \u00b7 K\u03b11 " + (element.k_alpha1_ev / 1000).toFixed(3) + " keV"
+            : "") +
+          "</p></div></div>" +
+          sectionHtml("core", "IDENTITY AND CLASSIFICATION", core + citation("atomic-weights")) +
+          sectionHtml(
+            "electronic",
+            "ELECTRONS AND IONIZATION",
+            electronic +
+              citation("configurations") +
+              citation("ionization") +
+              citation("electronegativity"),
+          ) +
+          sectionHtml(
+            "xray",
+            "X-RAY LINES AND EDGES",
+            xray,
+            element.has_xray_data && lines
+              ? lineCount + " lines, " + edgeCount + " edges"
+              : undefined,
+          ) +
+          sectionHtml("size", "RADII AND SIZE", size + citation("radii")) +
+          sectionHtml(
+            "physical",
+            "PHYSICAL AND THERMAL",
+            physical + citation("thermophysical"),
+          ) +
+          sectionHtml(
+            "isotopes",
+            "NATURAL ISOTOPES",
+            isotopeTable(element.natural_isotopes) + citation("isotopes"),
+            element.natural_isotope_count || undefined,
+          ) +
+          sectionHtml(
+            "occurrence",
+            "OCCURRENCE, DISCOVERY AND USE",
+            occurrence + prose + citation("occurrence"),
+          );
+
+        $("ptable-detail")
+          .querySelectorAll("details")
+          .forEach((section) => {
+            section.ontoggle = () => {
+              openSections[section.dataset.section] = section.open;
+            };
+          });
       }
+
+      function selectElement(symbol) {
+        const element = ptableElements.find((item) => item.symbol === symbol);
+        if (!element) return;
+        ptableSelected = symbol;
+        const cached = detailCache[symbol];
+        renderDetail(cached || element);
+        renderPeriodicTable();
+        if (cached) return;
+        fetch("/api/periodic_table/" + encodeURIComponent(symbol))
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.ok) throw new Error(data.error || "Could not load the element");
+            detailCache[symbol] = data.element;
+            // Only redraw if the reader is still on this element; on a fast
+            // click through the table the late arrival would otherwise replace
+            // whatever they moved on to.
+            if (ptableSelected === symbol) renderDetail(data.element);
+          })
+          .catch(() => {
+            /* The grid payload already carries every scalar property, so a
+               failed detail request costs the X-ray tables and the prose, not
+               the element. Leaving what is drawn in place beats replacing a
+               working panel with an error. */
+          });
+      }
+
+      /* ---------------- X-ray line finder ---------------- */
+      function renderXrayMatches(data) {
+        const target = $("xray-finder-result");
+        if (!data.matches.length) {
+          target.innerHTML =
+            '<p class="hint">No tabulated line within ' +
+            data.tolerance_ev +
+            " eV of " +
+            data.energy_kev.toFixed(4) +
+            " keV. Widening the tolerance or listing weaker lines may find one.</p>";
+          return;
+        }
+        target.innerHTML =
+          '<p class="hint">' +
+          data.match_count +
+          " line" +
+          (data.match_count === 1 ? "" : "s") +
+          " within " +
+          data.tolerance_ev +
+          " eV of " +
+          data.energy_kev.toFixed(4) +
+          " keV" +
+          (data.truncated ? ", nearest " + data.matches.length + " shown" : "") +
+          ".</p>" +
+          '<table class="pdata"><thead><tr><th class="text">Element</th>' +
+          '<th class="text">Line</th><th>Energy (keV)</th><th>Offset (eV)</th>' +
+          "<th>&#955; (&#197;)</th><th>Relative intensity</th></tr></thead><tbody>" +
+          data.matches
+            .map(
+              (match) =>
+                '<tr><td class="text"><strong>' +
+                match.symbol +
+                "</strong> " +
+                escapeHtml(match.name) +
+                ' <span class="unmeasured">Z=' +
+                match.atomic_number +
+                '</span></td><td class="text">' +
+                escapeHtml(match.label) +
+                "</td><td>" +
+                match.energy_kev.toFixed(4) +
+                "</td><td>" +
+                (match.difference_ev > 0 ? "+" : "") +
+                match.difference_ev.toFixed(1) +
+                "</td><td>" +
+                match.wavelength_angstrom.toFixed(4) +
+                "</td><td>" +
+                match.relative_intensity.toFixed(3) +
+                "</td></tr>",
+            )
+            .join("") +
+          "</tbody></table>" +
+          citation("xray");
+      }
+
+      $("xray-identify").onclick = () => {
+        const target = $("xray-finder-result");
+        target.innerHTML = '<p class="hint">Searching\u2026</p>';
+        const query =
+          "energy_kev=" +
+          encodeURIComponent($("xray-energy").value) +
+          "&tolerance_ev=" +
+          encodeURIComponent($("xray-tolerance").value) +
+          "&min_intensity=" +
+          encodeURIComponent($("xray-min-intensity").value);
+        fetch("/api/xray/identify?" + query)
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.ok) throw new Error(data.error || "Could not search the lines");
+            renderXrayMatches(data);
+          })
+          .catch((error) => {
+            target.innerHTML = '<p class="hint">' + escapeHtml(error.message) + "</p>";
+          });
+      };
+
+      /* ---------------- Where the numbers come from ---------------- */
+      function renderSources(data) {
+        sourceIndex = {};
+        data.sources.forEach((entry) => {
+          sourceIndex[entry.id] = entry;
+        });
+        const items = data.sources
+          .map(
+            (entry) =>
+              "<li><strong>" +
+              escapeHtml(entry.title) +
+              "</strong> \u2014 " +
+              escapeHtml(entry.publisher) +
+              ". " +
+              escapeHtml(entry.detail) +
+              '<br /><a href="' +
+              entry.url +
+              '" target="_blank" rel="noopener">' +
+              entry.url +
+              "</a>" +
+              (entry.doi
+                ? '<br /><a href="' +
+                  entry.doi +
+                  '" target="_blank" rel="noopener">' +
+                  entry.doi +
+                  "</a>"
+                : "") +
+              (entry.cross_check_url
+                ? '<br />Cross-check: <a href="' +
+                  entry.cross_check_url +
+                  '" target="_blank" rel="noopener">' +
+                  entry.cross_check_url +
+                  "</a>"
+                : "") +
+              "</li>",
+          )
+          .join("");
+        const tooling = data.tooling
+          .map(
+            (entry) =>
+              "<li><strong>" +
+              escapeHtml(entry.name) +
+              "</strong> \u2014 " +
+              escapeHtml(entry.detail) +
+              ' <a href="' +
+              entry.url +
+              '" target="_blank" rel="noopener">' +
+              entry.url +
+              "</a></li>",
+          )
+          .join("");
+        $("ptable-sources").innerHTML =
+          '<p class="hint">' +
+          escapeHtml(data.note) +
+          '</p><ul class="psources">' +
+          items +
+          '</ul><p class="pgroup-title" style="margin-top:14px">READ OUT OF THESE PACKAGES</p><ul class="psources">' +
+          tooling +
+          "</ul>";
+      }
+
+      fetch("/api/sources")
+        .then((response) => response.json())
+        .then((data) => {
+          if (!data.ok) return;
+          renderSources(data);
+          // The citations under each detail section need the index, so redraw
+          // whatever is already open now that it exists.
+          if (ptableSelected) selectElement(ptableSelected);
+        })
+        .catch(() => {
+          $("ptable-sources").innerHTML =
+            '<p class="hint">Could not load the source list.</p>';
+        });
 
       $("ptable-colour").onchange = () => {
         renderPeriodicTable();
